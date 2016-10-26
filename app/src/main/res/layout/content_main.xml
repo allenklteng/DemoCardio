@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+  android:id="@+id/content_main"
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  xmlns:tools="http://schemas.android.com/tools"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:paddingBottom="@dimen/activity_vertical_margin"
+  android:paddingLeft="@dimen/activity_horizontal_margin"
+  android:paddingRight="@dimen/activity_horizontal_margin"
+  android:paddingTop="@dimen/activity_vertical_margin"
+  app:layout_behavior="@string/appbar_scrolling_view_behavior"
+  tools:context="com.vitalsigns.democardio.MainActivity"
+  tools:showIn="@layout/activity_main">
+
+  <TextView
+    android:id="@+id/textTitle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_alignParentTop="true"
+    android:text=""/>
+
+  <!-- SBP -->
+  <LinearLayout
+    android:id="@+id/regionSbp"
+    android:layout_below="@id/textTitle"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layout_marginTop="@dimen/activity_vertical_margin"
+    android:layout_marginBottom="@dimen/activity_vertical_margin">
+
+    <TextView
+      android:id="@+id/textSbpTitle"
+      android:layout_width="0dp"
+      android:layout_height="match_parent"
+      android:layout_weight="1"
+      android:gravity="end"
+      android:text="@string/sbp_title"
+      android:textAlignment="viewEnd"/>
+
+    <TextView
+      android:id="@+id/textSbpValue"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="4"
+      android:gravity="center"
+      android:textAlignment="center"/>
+  </LinearLayout>
+
+  <!-- DBP -->
+  <LinearLayout
+    android:id="@+id/regionDbp"
+    android:layout_below="@id/regionSbp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layout_marginTop="@dimen/activity_vertical_margin"
+    android:layout_marginBottom="@dimen/activity_vertical_margin">
+
+    <TextView
+      android:id="@+id/textDbpTitle"
+      android:layout_width="0dp"
+      android:layout_height="match_parent"
+      android:layout_weight="1"
+      android:gravity="end"
+      android:text="@string/dbp_title"
+      android:textAlignment="viewEnd"/>
+
+    <TextView
+      android:id="@+id/textDbpValue"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="4"
+      android:gravity="center"
+      android:textAlignment="center"/>
+  </LinearLayout>
+
+  <!-- HR -->
+  <LinearLayout
+    android:id="@+id/regionHR"
+    android:layout_below="@id/regionDbp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:layout_marginTop="@dimen/activity_vertical_margin"
+    android:layout_marginBottom="@dimen/activity_vertical_margin">
+
+    <TextView
+      android:id="@+id/textHRTitle"
+      android:layout_width="0dp"
+      android:layout_height="match_parent"
+      android:layout_weight="1"
+      android:gravity="end"
+      android:text="@string/hr_title"
+      android:textAlignment="viewEnd"/>
+
+    <TextView
+      android:id="@+id/textHRValue"
+      android:layout_width="0dp"
+      android:layout_height="wrap_content"
+      android:layout_weight="4"
+      android:gravity="center"
+      android:textAlignment="center"/>
+  </LinearLayout>
+</RelativeLayout>

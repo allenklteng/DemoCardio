@@ -1,0 +1,19 @@
+<resources>
+  <string name="app_name">DemoCardio</string>
+  <string name="action_settings">Settings</string>
+  <string name="sbp_title">SBP</string>
+  <string name="dbp_title">DBP</string>
+  <string name="hr_title">HR</string>
+  <string name="select_device">SELECT BLE DEVICE</string>
+  <string name="scanning">Scanning a devices...</string>
+  <string name="bt_ble_not_support">Bluetooth Low Energy not supported</string>
+  <string name="bt_bt_not_support">Bluetooth is not supported</string>
+  <string name="cancel">Cancel</string>
+  <string name="scan">Scan</string>
+  <string name="paired">paired</string>
+  <string name="device_list_fragment_tag">device_list_fragment_tag</string>
+  <string name="bt_not_available">Bluetooth is not available.</string>
+  <string name="bt_connect_device_again">Please connect the device again.</string>
+  <string name="bt_connect_device_success">Device is connected</string>
+  <string name="package_identity">5d2b160c3d83f1134f9909be64f41a58</string>
+</resources>
