@@ -27,6 +27,8 @@ import java.util.Locale;
 
 import static com.vitalsigns.democardio.GlobalData.LOG_TAG;
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_COARSE_LOCATION;
+import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_EXTERNAL_STORAGE;
+import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_READ_PHONE_STATE;
 
 public class MainActivity extends AppCompatActivity
   implements BleDeviceListDialog.OnBleDeviceSelectedListener,
@@ -57,10 +59,13 @@ public class MainActivity extends AppCompatActivity
     setTextSize();
     showBioSignal(0, 0, 0);
 
-    initBle();
-    scanBle();
+    if(GlobalData.requestPermissionForAndroidM(this))
+    {
+      initBle();
+      scanBle();
 
-    VSDsp = new VitalSignsDsp(MainActivity.this);
+      VSDsp = new VitalSignsDsp(MainActivity.this);
+    }
   }
 
   @Override
@@ -164,10 +169,12 @@ public class MainActivity extends AppCompatActivity
     /// [AT-PM] : Start the measurement ; 10/24/2016
     if(VSDsp == null)
     {
+      Log.d(LOG_TAG, "VSDsp == null");
       return (false);
     }
     if(!VSDsp.Start())
     {
+      Log.d(LOG_TAG, "VSDsp.Start() == false");
       return (false);
     }
 
@@ -366,7 +373,6 @@ public class MainActivity extends AppCompatActivity
     switch (requestCode)
     {
       case PERMISSION_REQUEST_COARSE_LOCATION:
-      {
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "coarse location permission granted");
@@ -386,7 +392,49 @@ public class MainActivity extends AppCompatActivity
           });
           builder.show();
         }
-      }
+        break;
+      case PERMISSION_REQUEST_EXTERNAL_STORAGE:
+        if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        {
+          Log.d(LOG_TAG, "external storage permission granted");
+          scanBle();
+        }
+        else
+        {
+          AlertDialog.Builder builder = new AlertDialog.Builder(this);
+          builder.setTitle("Functionality limited");
+          builder.setMessage("Since external storage has not been granted, this app will not be able to discover devices.");
+          builder.setPositiveButton(android.R.string.ok, null);
+          builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+              finish();
+            }
+          });
+          builder.show();
+        }
+        break;
+      case PERMISSION_REQUEST_READ_PHONE_STATE:
+        if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        {
+          Log.d(LOG_TAG, "read phone state granted");
+          scanBle();
+        }
+        else
+        {
+          AlertDialog.Builder builder = new AlertDialog.Builder(this);
+          builder.setTitle("Functionality limited");
+          builder.setMessage("Since read phone state has not been granted, this app will not be able to discover devices.");
+          builder.setPositiveButton(android.R.string.ok, null);
+          builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+              finish();
+            }
+          });
+          builder.show();
+        }
+        break;
     }
   }
 }

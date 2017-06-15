@@ -55,12 +55,14 @@ public class VitalSignsDsp
     /// [AT-PM] : Check DSP is available ; 10/25/2016
     if(!DSP.IsJniAvailable())
     {
+      Log.d(LOG_TAG, "DSP.IsJniAvailable() == false");
       return (false);
     }
 
     /// [AT-PM] : Start DSP ; 10/25/2016
     if(!startDsp())
     {
+      Log.d(LOG_TAG, "startDsp() == false");
       return (false);
     }
 
