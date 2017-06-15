@@ -16,4 +16,6 @@
   <string name="bt_connect_device_again">Please connect the device again.</string>
   <string name="bt_connect_device_success">Device is connected</string>
   <string name="package_identity">5d2b160c3d83f1134f9909be64f41a58</string>
+  <string name="request_permission_title">This app needs location access</string>
+  <string name="request_permission_content">Please grant location access so this app can detect ble device.</string>
 </resources>

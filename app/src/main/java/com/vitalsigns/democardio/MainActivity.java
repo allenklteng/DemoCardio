@@ -1,12 +1,16 @@
 package com.vitalsigns.democardio;
 
 import android.app.DialogFragment;
+import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
@@ -22,6 +26,7 @@ import com.vitalsigns.sdk.ble.BleEventListener;
 import java.util.Locale;
 
 import static com.vitalsigns.democardio.GlobalData.LOG_TAG;
+import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_COARSE_LOCATION;
 
 public class MainActivity extends AppCompatActivity
   implements BleDeviceListDialog.OnBleDeviceSelectedListener,
@@ -237,8 +242,11 @@ public class MainActivity extends AppCompatActivity
 
   private void scanBle()
   {
-    DialogFragment fragment = new BleDeviceListDialog();
-    fragment.show(getFragmentManager(), getResources().getString(R.string.device_list_fragment_tag));
+    if(GlobalData.requestPermissionForAndroidM(this))
+    {
+      DialogFragment fragment = new BleDeviceListDialog();
+      fragment.show(getFragmentManager(), getResources().getString(R.string.device_list_fragment_tag));
+    }
   }
 
   private void initBle()
@@ -348,5 +356,37 @@ public class MainActivity extends AppCompatActivity
   public void onInterrupt()
   {
     stop();
+  }
+
+  @Override
+  public void onRequestPermissionsResult(int requestCode,
+                                         @NonNull String[] permissions,
+                                         @NonNull int[] grantResults)
+  {
+    switch (requestCode)
+    {
+      case PERMISSION_REQUEST_COARSE_LOCATION:
+      {
+        if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        {
+          Log.d(LOG_TAG, "coarse location permission granted");
+          scanBle();
+        }
+        else
+        {
+          AlertDialog.Builder builder = new AlertDialog.Builder(this);
+          builder.setTitle("Functionality limited");
+          builder.setMessage("Since location access has not been granted, this app will not be able to discover devices.");
+          builder.setPositiveButton(android.R.string.ok, null);
+          builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+              finish();
+            }
+          });
+          builder.show();
+        }
+      }
+    }
   }
 }
