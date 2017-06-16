@@ -253,8 +253,7 @@ public class MainActivity extends AppCompatActivity
     if(bleDeviceAddress == null)
     {
       /// [AT-PM] : Re-scan the BLE device ; 10/24/2016
-      Log.d(LOG_TAG, "scanBle @ onBleDeviceSelected()");
-      scanBle();
+      Log.d(LOG_TAG, "No device selected");
       return;
     }
 
