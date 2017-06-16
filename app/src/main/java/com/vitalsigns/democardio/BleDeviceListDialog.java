@@ -194,7 +194,6 @@ public class BleDeviceListDialog extends DialogFragment
         "Connecting to " +
         DeviceList.get(position).getName()+"\n Please, wait BLE connected",
         Toast.LENGTH_SHORT);
-      GlobalData.BleControl.SetDeviceAddress(DeviceList.get(position).getAddress());
       OnBleDeviceSelectedListener listener = (OnBleDeviceSelectedListener)getActivity();
       listener.onBleDeviceSelected(DeviceList.get(position).getAddress());
       dismiss();

@@ -7,7 +7,6 @@ import android.os.HandlerThread;
 import android.os.Process;
 import android.util.Log;
 
-import com.vitalsigns.sdk.ble.BleControl;
 import com.vitalsigns.sdk.dsp.bp.Constant;
 import com.vitalsigns.sdk.dsp.bp.Dsp;
 import com.vitalsigns.sdk.utility.Utility;
@@ -16,6 +15,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import static com.vitalsigns.democardio.GlobalData.LOG_TAG;
+import static com.vitalsigns.sdk.dsp.bp.Constant.DEV_TYPE_BLE_WATCH;
+import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_STANDARD;
 
 /**
  * Created by allen_teng on 25/10/2016.
@@ -46,7 +47,8 @@ public class VitalSignsDsp
   {
     DSP = new Dsp((Activity)context,
                   context.getExternalFilesDir(null).getPath(),
-                  context.getString(R.string.package_identity));
+                  context.getString(R.string.package_identity),
+                  mOnSendBPInfoEvent);
     OnUpdateResultCallback = (OnUpdateResult)context;
   }
 
@@ -84,7 +86,7 @@ public class VitalSignsDsp
     StableCnt = 0;
 
     /// [AT-PM] : Start BLE ; 10/25/2016
-    GlobalData.BleControl.Start();
+    GlobalData.BleControl.start();
 
     /// [AT-PM] : Callback to update information ; 10/25/2016
     OnUpdateResultCallback.onUpdateResult(-1.0f, -1.0f, -1.0f);
@@ -119,7 +121,7 @@ public class VitalSignsDsp
     }
 
     /// [AT-PM] : Stop BLE ; 10/25/2016
-    GlobalData.BleControl.Stop();
+    GlobalData.BleControl.stop();
 
     /// [AT-PM] : Stop DSP ; 10/25/2016
     DSP.Stop();
@@ -143,7 +145,7 @@ public class VitalSignsDsp
       fEndTime = DSP.GetEndTime();
       fStartTime = fEndTime > UPDATE_VIEW_WINDOW ? fEndTime - UPDATE_VIEW_WINDOW : fEndTime;
       Log.d(LOG_TAG, "UpdateView(" + Float.toString(fStartTime) + ", " + Float.toString(fEndTime) + ")");
-      DSP.UpdateView(fStartTime, fEndTime);
+      DSP.UpdateView(fStartTime, fEndTime, UI_CODE_TYPE_STANDARD);
 
       /// [AT-PM] : Check the measurement is stable ; 10/25/2016
       if(DSP.BPStable())
@@ -293,14 +295,22 @@ public class VitalSignsDsp
     DSP.SetInitValue(-1.0f, -1.0f, -1.0f, -1.0f);
 
     /// [AT-PM] : Start the DSP ; 10/25/2016
-    bRtn = DSP.Start(GlobalData.BleControl.GetSampleRate(), BleControl.DEV_TYPE_BLE_WATCH);
+    bRtn = DSP.Start(GlobalData.BleControl.sampleRate(), DEV_TYPE_BLE_WATCH);
     return (bRtn);
   }
 
-  public interface OnUpdateResult
+  interface OnUpdateResult
   {
-    public void onUpdateResult(float fSbp, float fDbp, float fHR);
+    void onUpdateResult(float fSbp, float fDbp, float fHR);
 
-    public void onInterrupt();
+    void onInterrupt();
   }
+
+  private Dsp.OnSendBPInfoEvent mOnSendBPInfoEvent = new Dsp.OnSendBPInfoEvent()
+  {
+    @Override
+    public void OnSendBPInfo(float v, float v1, float v2, float v3, float v4)
+    {
+    }
+  };
 }

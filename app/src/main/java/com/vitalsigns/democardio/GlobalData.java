@@ -13,8 +13,6 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 
-import com.vitalsigns.sdk.ble.BleControl;
-
 /**
  * Created by allen_teng on 24/10/2016.
  */
@@ -59,7 +57,7 @@ public class GlobalData extends Application
   }
 
   public static BluetoothDevice BleDevice;
-  public static BleControl BleControl;
+  public static VitalSignsBle BleControl;
 
   public static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
   public static final int PERMISSION_REQUEST_EXTERNAL_STORAGE = 2;

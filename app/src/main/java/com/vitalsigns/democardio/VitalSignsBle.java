@@ -1,5 +1,6 @@
 package com.vitalsigns.democardio;
 
+import android.bluetooth.BluetoothAdapter;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -110,7 +111,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
     public void onServiceConnected(ComponentName componentName, IBinder iBinder)
     {
       mBleService = ((BleService.LocalBinder)iBinder).getService();
-      mBleService.Initialize(mBleIntDataQueue, BleCmdService.HW_TYPE.HR);
+      mBleService.Initialize(mBleIntDataQueue, BleCmdService.HW_TYPE.CARDIO);
       mBleService.RegisterClient(VitalSignsBle.this);
     }
 
@@ -134,10 +135,12 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Connect to the device
    */
-  public void connect()
+  public void connect(String mac)
   {
     if(mBleService != null)
     {
+      mBleService.SetBleDevice(BluetoothAdapter.getDefaultAdapter()
+                                               .getRemoteDevice(mac));
       mBleService.Connect();
     }
   }
@@ -173,5 +176,14 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
     {
       mBleService.CmdStop();
     }
+  }
+
+  /**
+   * Get device sample rate
+   * @return sample rate
+   */
+  public int sampleRate()
+  {
+    return ((mBleService != null) ? mBleService.GetSampleRate() : 0);
   }
 }

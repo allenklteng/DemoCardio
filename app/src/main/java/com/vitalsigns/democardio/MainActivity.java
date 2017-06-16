@@ -5,7 +5,6 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
-import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -18,10 +17,6 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import com.vitalsigns.sdk.ble.BleControl;
-import com.vitalsigns.sdk.ble.BleEventListener;
 
 import java.util.Locale;
 
@@ -32,13 +27,9 @@ import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_READ_PHONE
 
 public class MainActivity extends AppCompatActivity
   implements BleDeviceListDialog.OnBleDeviceSelectedListener,
-             BleEventListener,
              VitalSignsDsp.OnUpdateResult
 {
-  private final int QUERY_BLE_TIMER = 7000;
-
   private FloatingActionButton FabStart = null;
-  private Handler QueryBleAlive = null;
   private VitalSignsDsp VSDsp = null;
   private int Sbp = -1;
   private int Dbp = -1;
@@ -240,11 +231,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     /// [AT-PM] : Connect BLE device ; 10/24/2016
-    GlobalData.BleControl.Connect(bleDeviceAddress);
-
-    /// [AT-PM] : Start a handler to check BLE device connection ; 10/24/2016
-    QueryBleAlive.removeCallbacksAndMessages(null);
-    QueryBleAlive.postDelayed(queryBleAliveRunnable, QUERY_BLE_TIMER);
+    GlobalData.BleControl.connect(bleDeviceAddress);
   }
 
   private void scanBle()
@@ -258,39 +245,19 @@ public class MainActivity extends AppCompatActivity
 
   private void initBle()
   {
-    GlobalData.BleControl = new BleControl(MainActivity.this, MainActivity.this, BleControl.APP_TYPE_CARDIO);
-
-    if(!GlobalData.BleControl.Initialize(MainActivity.this))
-    {
-      GlobalData.showToast(MainActivity.this,
-                           getResources().getString(R.string.bt_not_available),
-                           Toast.LENGTH_LONG);
-      return;
-    }
-
-    QueryBleAlive = new Handler();
+    GlobalData.BleControl = new VitalSignsBle(MainActivity.this, mBleEvent);
   }
 
   @Override
   protected void onResume()
   {
     super.onResume();
-
-    if(GlobalData.BleControl.Resume())
-    {
-      QueryBleAlive.postDelayed(queryBleAliveRunnable, QUERY_BLE_TIMER);
-    }
   }
 
   @Override
   protected void onPause()
   {
     super.onPause();
-
-    if(GlobalData.BleControl.Pause())
-    {
-      QueryBleAlive.removeCallbacksAndMessages(null);
-    }
   }
 
   @Override
@@ -300,56 +267,8 @@ public class MainActivity extends AppCompatActivity
 
     if(GlobalData.BleControl != null)
     {
-      GlobalData.BleControl.Destroy();
+      GlobalData.BleControl.destroy();
     }
-  }
-
-  final Runnable queryBleAliveRunnable = new Runnable()
-  {
-    public void run()
-    {
-      if(!GlobalData.BleControl.isBleDeviceAlive())
-      {
-        GlobalData.showToast(MainActivity.this,
-                             getResources().getString(R.string.bt_connect_device_again),
-                             Toast.LENGTH_SHORT);
-      }
-      else
-      {
-        GlobalData.showToast(MainActivity.this,
-                             getResources().getString(R.string.bt_connect_device_success),
-                             Toast.LENGTH_SHORT);
-      }
-    }
-  };
-
-  @Override
-  public void onDisconnect(boolean b)
-  {
-    stop();
-
-    /// [AT-PM] : Scan the BLE device ; 10/24/2016
-    scanBle();
-  }
-
-  @Override
-  public void onConnect()
-  {
-  }
-
-  @Override
-  public void onDataReceived(float[] floats)
-  {
-    /// [AT-PM] : Data received ; 10/24/2016
-    if(VSDsp != null)
-    {
-      VSDsp.SetBleData(floats);
-    }
-  }
-
-  @Override
-  public void onBleFirmwareUpdate()
-  {
   }
 
   @Override
@@ -437,4 +356,18 @@ public class MainActivity extends AppCompatActivity
         break;
     }
   }
+
+  private VitalSignsBle.BleEvent mBleEvent = new VitalSignsBle.BleEvent()
+  {
+    @Override
+    public void onDisconnect()
+    {
+      scanBle();
+    }
+
+    @Override
+    public void onConnect()
+    {
+    }
+  };
 }
