@@ -20,7 +20,6 @@ import android.widget.TextView;
 
 import java.util.Locale;
 
-import static com.vitalsigns.democardio.GlobalData.LOG_TAG;
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_COARSE_LOCATION;
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_EXTERNAL_STORAGE;
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_READ_PHONE_STATE;
@@ -29,6 +28,8 @@ public class MainActivity extends AppCompatActivity
   implements BleDeviceListDialog.OnBleDeviceSelectedListener,
              VitalSignsDsp.OnUpdateResult
 {
+  private static final String LOG_TAG = "MainActivity";
+
   private FloatingActionButton FabStart = null;
   private VitalSignsDsp VSDsp = null;
   private int Sbp = -1;
@@ -53,7 +54,7 @@ public class MainActivity extends AppCompatActivity
     if(GlobalData.requestPermissionForAndroidM(this))
     {
       initBle();
-      scanBle();
+      Log.d(LOG_TAG, "scanBle @ onCreate()");
 
       VSDsp = new VitalSignsDsp(MainActivity.this);
     }
@@ -76,9 +77,14 @@ public class MainActivity extends AppCompatActivity
     int id = item.getItemId();
 
     //noinspection SimplifiableIfStatement
-    if(id == R.id.action_settings)
+    if(id == R.id.action_scan_ble_device)
     {
-      return true;
+      if(GlobalData.requestPermissionForAndroidM(this))
+      {
+        Log.d(LOG_TAG, "scanBle @ onOptionsItemSelected()");
+        scanBle();
+      }
+      return (true);
     }
 
     return super.onOptionsItemSelected(item);
@@ -194,6 +200,16 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onClick(View view)
     {
+      /// [AT-PM] : Check connected ; 06/16/2017
+      if(!GlobalData.BleControl.isConnect())
+      {
+        Snackbar.make(view, "Blood pressure measurement -> STOPPED", Snackbar.LENGTH_LONG)
+                .setAction("Action", null)
+                .show();
+        return;
+      }
+
+      /// [AT-PM] : Stop the recording ; 06/16/2017
       if(GlobalData.Recording)
       {
         stop();
@@ -201,21 +217,21 @@ public class MainActivity extends AppCompatActivity
         Snackbar.make(view, "Blood pressure measurement -> STOPPED", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
                 .show();
+        return;
+      }
+
+      /// [AT-PM] : Start recording ; 06/16/2017
+      if(start())
+      {
+        Snackbar.make(view, "Blood pressure measurement -> STARTED", Snackbar.LENGTH_LONG)
+                .setAction("Action", null)
+                .show();
       }
       else
       {
-        if(start())
-        {
-          Snackbar.make(view, "Blood pressure measurement -> STARTED", Snackbar.LENGTH_LONG)
-                  .setAction("Action", null)
-                  .show();
-        }
-        else
-        {
-          Snackbar.make(view, "Blood pressure measurement -> FAILED", Snackbar.LENGTH_LONG)
-                  .setAction("Action", null)
-                  .show();
-        }
+        Snackbar.make(view, "Blood pressure measurement -> FAILED", Snackbar.LENGTH_LONG)
+                .setAction("Action", null)
+                .show();
       }
     }
   };
@@ -226,6 +242,7 @@ public class MainActivity extends AppCompatActivity
     if(bleDeviceAddress == null)
     {
       /// [AT-PM] : Re-scan the BLE device ; 10/24/2016
+      Log.d(LOG_TAG, "scanBle @ onBleDeviceSelected()");
       scanBle();
       return;
     }
@@ -295,7 +312,6 @@ public class MainActivity extends AppCompatActivity
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "coarse location permission granted");
-          scanBle();
         }
         else
         {
@@ -316,7 +332,6 @@ public class MainActivity extends AppCompatActivity
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "external storage permission granted");
-          scanBle();
         }
         else
         {
@@ -337,7 +352,6 @@ public class MainActivity extends AppCompatActivity
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "read phone state granted");
-          scanBle();
         }
         else
         {
@@ -362,12 +376,16 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onDisconnect()
     {
-      scanBle();
+      Log.d(LOG_TAG, "onDisconnect()");
+      stop();
+
+      GlobalData.BleControl.disconnect();
     }
 
     @Override
     public void onConnect()
     {
+      Log.d(LOG_TAG, "onConnect()");
     }
   };
 }

@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.util.Log;
 
 import com.vitalsigns.sdk.ble.BleCmdService;
 import com.vitalsigns.sdk.ble.BlePedometerData;
@@ -25,6 +26,8 @@ import static android.content.Context.BIND_AUTO_CREATE;
 
 public class VitalSignsBle implements BleCmdService.OnServiceListener
 {
+  private static final String LOG_TAG = "VitalSignsBle";
+
   @Override
   public void chartNumberConfig(int i, int i1, int[] ints)
   {
@@ -38,6 +41,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   @Override
   public void bleConnectionLost(String s)
   {
+    Log.d(LOG_TAG, "bleConnectionLost:" + s);
     mBleEvent.onDisconnect();
   }
 
@@ -50,6 +54,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   @Override
   public void bleGattState()
   {
+    Log.d(LOG_TAG, "bleGattState");
     mBleEvent.onDisconnect();
   }
 
@@ -61,12 +66,14 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   @Override
   public void bleTransmitTimeout()
   {
+    Log.d(LOG_TAG, "bleTransmitTimeout");
     mBleEvent.onDisconnect();
   }
 
   @Override
   public void bleAckError(String s)
   {
+    Log.d(LOG_TAG, "bleAckError:" + s);
     mBleEvent.onDisconnect();
   }
 
@@ -86,10 +93,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
     void onConnect();
   }
 
-  private static final int BLE_DATA_QUEUE_SIZE = 128;
-
   private BleEvent              mBleEvent        = null;
-  private BlockingQueue<int []> mBleIntDataQueue = null;
   private BleService            mBleService      = null;
   private boolean               mBleServiceBind  = false;
   private Context               mContext         = null;
@@ -98,8 +102,6 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   {
     mContext = context;
     mBleEvent = event;
-
-    mBleIntDataQueue = new ArrayBlockingQueue<>(BLE_DATA_QUEUE_SIZE);
 
     Intent intent = new Intent(context, BleService.class);
     mBleServiceBind = context.bindService(intent, mBleServiceConnection, BIND_AUTO_CREATE);
@@ -111,7 +113,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
     public void onServiceConnected(ComponentName componentName, IBinder iBinder)
     {
       mBleService = ((BleService.LocalBinder)iBinder).getService();
-      mBleService.Initialize(mBleIntDataQueue, BleCmdService.HW_TYPE.CARDIO);
+      mBleService.Initialize(GlobalData.mBleIntDataQueue, BleCmdService.HW_TYPE.CARDIO);
       mBleService.RegisterClient(VitalSignsBle.this);
     }
 
@@ -185,5 +187,14 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   public int sampleRate()
   {
     return ((mBleService != null) ? mBleService.GetSampleRate() : 0);
+  }
+
+  /**
+   * Get device is connected or not
+   * @return true if connected
+   */
+  public boolean isConnect()
+  {
+    return ((mBleService != null) ? mBleService.IsBleConnected() : false);
   }
 }

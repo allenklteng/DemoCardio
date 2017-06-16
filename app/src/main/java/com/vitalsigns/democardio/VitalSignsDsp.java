@@ -14,7 +14,6 @@ import com.vitalsigns.sdk.utility.Utility;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static com.vitalsigns.democardio.GlobalData.LOG_TAG;
 import static com.vitalsigns.sdk.dsp.bp.Constant.DEV_TYPE_BLE_WATCH;
 import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_STANDARD;
 
@@ -24,22 +23,20 @@ import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_STANDARD;
 
 public class VitalSignsDsp
 {
+  private static final String LOG_TAG = "VitalSignsDsp";
+
   private final int CAPTURE_BLE_INIT_TIME = 100;
   private final int UPDATE_VIEW_WINDOW = 6000;
   private final int UPDATE_VIEW_INTERVAL = 1000;
-  private final int BLE_TIMEOUT_CHECK_INTERVAL = 2000;
   private final int STABLE_COUNT = 10;
 
-  private BlockingQueue<float[]> queueBleData = new ArrayBlockingQueue<float[]>(64);
   private boolean Running = false;
   private boolean Executing = false;
-  private boolean BleDataReceived = false;
   private int StableCnt = 0;
   private Dsp DSP = null;
   private HandlerThread DspThread;
   private Handler DspThreadHandler;
   private Handler UpdateResultHandler;
-  private Handler BleTimeoutHandler;
   private Handler AutoStopHandler;
   private OnUpdateResult OnUpdateResultCallback;
 
@@ -68,8 +65,6 @@ public class VitalSignsDsp
       return (false);
     }
 
-    queueBleData.clear();
-
     DspThread = new HandlerThread("DSP Thread", Process.THREAD_PRIORITY_BACKGROUND);
     DspThread.start();
     DspThreadHandler = null;
@@ -78,11 +73,7 @@ public class VitalSignsDsp
     UpdateResultHandler = null;
     UpdateResultHandler = new Handler();
     UpdateResultHandler.postDelayed(updateResultRunnable, UPDATE_VIEW_INTERVAL);
-    BleTimeoutHandler = null;
-    BleTimeoutHandler = new Handler();
-    BleTimeoutHandler.postDelayed(bleTimeoutRunnable, BLE_TIMEOUT_CHECK_INTERVAL);
     Running = true;
-    BleDataReceived = false;
     StableCnt = 0;
 
     /// [AT-PM] : Start BLE ; 10/25/2016
@@ -97,7 +88,6 @@ public class VitalSignsDsp
   public void Stop()
   {
     UpdateResultHandler.removeCallbacksAndMessages(null);
-    BleTimeoutHandler.removeCallbacksAndMessages(null);
 
     /// [AT-PM] : Stop the thread ; 10/25/2016
     Running = false;
@@ -125,12 +115,6 @@ public class VitalSignsDsp
 
     /// [AT-PM] : Stop DSP ; 10/25/2016
     DSP.Stop();
-  }
-
-  public void SetBleData(float [] floats)
-  {
-    queueBleData.offer(floats);
-    BleDataReceived = true;
   }
 
   private final Runnable updateResultRunnable = new Runnable()
@@ -176,26 +160,6 @@ public class VitalSignsDsp
     }
   };
 
-  private final Runnable bleTimeoutRunnable = new Runnable()
-  {
-    @Override
-    public void run()
-    {
-      if(BleDataReceived == false)
-      {
-        /// [AT-PM] : BLE transmit timeout ; 10/25/2016
-        OnUpdateResultCallback.onInterrupt();
-      }
-      BleDataReceived = false;
-
-      /// [AT-PM] : Restart the thread ; 10/25/2016
-      if(Running)
-      {
-        BleTimeoutHandler.postDelayed(bleTimeoutRunnable, BLE_TIMEOUT_CHECK_INTERVAL);
-      }
-    }
-  };
-
   private final Runnable autoStopProc = new Runnable()
   {
     @Override
@@ -211,8 +175,8 @@ public class VitalSignsDsp
     @Override
     public void run()
     {
-      float [] fBleDatas;
-      BlockingQueue<Float> queueData = new ArrayBlockingQueue<Float>(256);
+      int [] nBleDatas;
+      BlockingQueue<Integer> queueData = new ArrayBlockingQueue<Integer>(256);
       float [] fEcgDatas;
       float [] fPpgDatas;
       int nSize;
@@ -222,16 +186,16 @@ public class VitalSignsDsp
 
       while(Running)
       {
-        fBleDatas = null;
-        if(!queueBleData.isEmpty())
+        nBleDatas = null;
+        if(!GlobalData.mBleIntDataQueue.isEmpty())
         {
           /// [AT-PM] : Get data from BLE queue ; 10/25/2016
-          fBleDatas = queueBleData.poll();
-          for(float fBleData : fBleDatas)
+          nBleDatas = GlobalData.mBleIntDataQueue.poll();
+          for(int nBleData : nBleDatas)
           {
-            queueData.offer(fBleData);
+            queueData.offer(nBleData);
           }
-          Log.d(LOG_TAG, "Get " + Integer.toString(fBleDatas.length) + " Data");
+          Log.d(LOG_TAG, "Get " + Integer.toString(nBleDatas.length) + " Data");
 
           /// [AT-PM] : Execute DSP ; 10/25/2016
           nSize = queueData.size();
@@ -302,7 +266,6 @@ public class VitalSignsDsp
   interface OnUpdateResult
   {
     void onUpdateResult(float fSbp, float fDbp, float fHR);
-
     void onInterrupt();
   }
 

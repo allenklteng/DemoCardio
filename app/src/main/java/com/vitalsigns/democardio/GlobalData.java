@@ -13,14 +13,15 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
 /**
  * Created by allen_teng on 24/10/2016.
  */
 
 public class GlobalData extends Application
 {
-  public static final String LOG_TAG = "DEMO CARDIO";
-
   public static boolean Recording = false;
 
   private static Toast mToast = null;
@@ -58,6 +59,8 @@ public class GlobalData extends Application
 
   public static BluetoothDevice BleDevice;
   public static VitalSignsBle BleControl;
+  private static final int BLE_DATA_QUEUE_SIZE = 128;
+  public static BlockingQueue<int []> mBleIntDataQueue = new ArrayBlockingQueue<>(BLE_DATA_QUEUE_SIZE);
 
   public static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
   public static final int PERMISSION_REQUEST_EXTERNAL_STORAGE = 2;
