@@ -87,13 +87,19 @@ public class VitalSignsDsp
 
   public void Stop()
   {
-    UpdateResultHandler.removeCallbacksAndMessages(null);
+    if(UpdateResultHandler != null)
+    {
+      UpdateResultHandler.removeCallbacksAndMessages(null);
+    }
 
     /// [AT-PM] : Stop the thread ; 10/25/2016
     Running = false;
     if(DspThread != null)
     {
-      DspThreadHandler.removeCallbacksAndMessages(null);
+      if(DspThreadHandler != null)
+      {
+        DspThreadHandler.removeCallbacksAndMessages(null);
+      }
       DspThread.quit();
       DspThread.interrupt();
       DspThread = null;

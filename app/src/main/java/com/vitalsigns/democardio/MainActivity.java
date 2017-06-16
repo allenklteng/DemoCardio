@@ -86,6 +86,10 @@ public class MainActivity extends AppCompatActivity
       }
       return (true);
     }
+    if(id == R.id.action_disconnect)
+    {
+      GlobalData.BleControl.disconnect();
+    }
 
     return super.onOptionsItemSelected(item);
   }
@@ -192,7 +196,14 @@ public class MainActivity extends AppCompatActivity
 
     GlobalData.Recording = false;
 
-    FabStart.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), android.R.drawable.ic_media_play));
+    runOnUiThread(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        FabStart.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), android.R.drawable.ic_media_play));
+      }
+    });
   }
 
   private View.OnClickListener onClickListenerFab = new View.OnClickListener()
