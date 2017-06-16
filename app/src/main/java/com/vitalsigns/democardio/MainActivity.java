@@ -1,6 +1,6 @@
 package com.vitalsigns.democardio;
 
-import android.app.DialogFragment;
+import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
@@ -18,6 +18,8 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
 
+import com.vitalsigns.sdk.ble.scan.DeviceListFragment;
+
 import java.util.Locale;
 
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_COARSE_LOCATION;
@@ -25,7 +27,7 @@ import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_EXTERNAL_S
 import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_READ_PHONE_STATE;
 
 public class MainActivity extends AppCompatActivity
-  implements BleDeviceListDialog.OnBleDeviceSelectedListener,
+  implements DeviceListFragment.OnEvent,
              VitalSignsDsp.OnUpdateResult
 {
   private static final String LOG_TAG = "MainActivity";
@@ -261,12 +263,22 @@ public class MainActivity extends AppCompatActivity
     GlobalData.BleControl.connect(bleDeviceAddress);
   }
 
+  @Override
+  public void onDfuDeviceSelected(BluetoothDevice bluetoothDevice)
+  {
+
+  }
+
   private void scanBle()
   {
     if(GlobalData.requestPermissionForAndroidM(this))
     {
-      DialogFragment fragment = new BleDeviceListDialog();
-      fragment.show(getFragmentManager(), getResources().getString(R.string.device_list_fragment_tag));
+      /// [AT-PM] : Call a dialog to scan device ; 05/05/2017
+      DeviceListFragment fragment = DeviceListFragment.newInstance(DeviceListFragment.ACTION_SCAN_BLE_DEVICE,
+                                                                   DeviceListFragment.STYLE_WHITE);
+      getFragmentManager().beginTransaction()
+                          .add(fragment, getResources().getString(R.string.device_list_fragment_tag))
+                          .commitAllowingStateLoss();
     }
   }
 
