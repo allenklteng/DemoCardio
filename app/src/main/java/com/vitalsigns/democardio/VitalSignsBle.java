@@ -15,8 +15,6 @@ import com.vitalsigns.sdk.ble.BleService;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 
@@ -24,7 +22,7 @@ import static android.content.Context.BIND_AUTO_CREATE;
  * Created by AllenTeng on 6/15/2017.
  */
 
-public class VitalSignsBle implements BleCmdService.OnServiceListener
+class VitalSignsBle implements BleCmdService.OnServiceListener
 {
   private static final String LOG_TAG = "VitalSignsBle";
 
@@ -87,7 +85,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   {
   }
 
-  public interface BleEvent
+  interface BleEvent
   {
     void onDisconnect();
     void onConnect();
@@ -98,7 +96,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   private boolean               mBleServiceBind  = false;
   private Context               mContext         = null;
 
-  public VitalSignsBle(@NotNull Context context, @NotNull BleEvent event)
+  VitalSignsBle(@NotNull Context context, @NotNull BleEvent event)
   {
     mContext = context;
     mBleEvent = event;
@@ -126,7 +124,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Destroy the VitalSignsBle object
    */
-  public void destroy()
+  void destroy()
   {
     if(mBleServiceBind)
     {
@@ -137,7 +135,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Connect to the device
    */
-  public void connect(String mac)
+  void connect(String mac)
   {
     if(mBleService != null)
     {
@@ -150,7 +148,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Disconnect the device
    */
-  public void disconnect()
+  void disconnect()
   {
     if(mBleService != null)
     {
@@ -161,7 +159,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Start the measurement
    */
-  public void start()
+  void start()
   {
     if(mBleService != null)
     {
@@ -172,7 +170,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
   /**
    * Stop the measurement
    */
-  public void stop()
+  void stop()
   {
     if(mBleService != null)
     {
@@ -184,7 +182,7 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
    * Get device sample rate
    * @return sample rate
    */
-  public int sampleRate()
+  int sampleRate()
   {
     return ((mBleService != null) ? mBleService.GetSampleRate() : 0);
   }
@@ -193,8 +191,8 @@ public class VitalSignsBle implements BleCmdService.OnServiceListener
    * Get device is connected or not
    * @return true if connected
    */
-  public boolean isConnect()
+  boolean isConnect()
   {
-    return ((mBleService != null) ? mBleService.IsBleConnected() : false);
+    return ((mBleService != null) && mBleService.IsBleConnected());
   }
 }
