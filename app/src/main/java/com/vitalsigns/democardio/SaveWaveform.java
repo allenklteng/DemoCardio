@@ -69,7 +69,7 @@ public class SaveWaveform
    */
   private void writeHeader(String filename)
   {
-    String logFilename = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + filename + ".csv";
+    String logFilename = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + filename;
     Log.d(LOG_TAG, "Save file to " + logFilename);
     try
     {
@@ -94,7 +94,7 @@ public class SaveWaveform
    */
   private void writeData(String filename, ArrayList<float []> ecgs, ArrayList<float []> ppgs)
   {
-    String logFilename = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + filename + ".csv";
+    String logFilename = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + filename;
 
     try
     {

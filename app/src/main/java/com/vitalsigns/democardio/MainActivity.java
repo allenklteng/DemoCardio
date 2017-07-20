@@ -193,6 +193,11 @@ public class MainActivity extends AppCompatActivity
 
   private void stop()
   {
+    /// [AT-PM] : No need to stop if not in recording ; 07/20/2017
+    if(!GlobalData.Recording)
+    {
+      return;
+    }
     /// [AT-PM] : Stop the measurement ; 10/24/2016
     if(VSDsp == null)
     {
@@ -217,7 +222,7 @@ public class MainActivity extends AppCompatActivity
       @Override
       public void run()
       {
-        new SaveWaveform().save(VSDsp, "Waveform_" + Utility.getDateTime() + "_.csv");
+        new SaveWaveform().save(VSDsp, "Waveform_" + Utility.getDateTime() + ".csv");
       }
     });
   }
