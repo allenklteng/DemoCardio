@@ -266,7 +266,11 @@ public class MainActivity extends AppCompatActivity
   @Override
   public void onDfuDeviceSelected(BluetoothDevice bluetoothDevice)
   {
+  }
 
+  @Override
+  public void onSendCrashMsg(String s, String s1)
+  {
   }
 
   private void scanBle()

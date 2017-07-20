@@ -8,9 +8,12 @@ import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.vitalsigns.sdk.ble.BleAlertData;
 import com.vitalsigns.sdk.ble.BleCmdService;
 import com.vitalsigns.sdk.ble.BlePedometerData;
 import com.vitalsigns.sdk.ble.BleService;
+import com.vitalsigns.sdk.ble.BleSleepData;
+import com.vitalsigns.sdk.ble.BleSwitchData;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -32,7 +35,12 @@ class VitalSignsBle implements BleCmdService.OnServiceListener
   }
 
   @Override
-  public void pedometerData(ArrayList<BlePedometerData> arrayList)
+  public void pedometerData(int i, ArrayList<BlePedometerData> arrayList)
+  {
+  }
+
+  @Override
+  public void sleepData(int i, int i1, ArrayList<BleSleepData> arrayList)
   {
   }
 
@@ -83,6 +91,36 @@ class VitalSignsBle implements BleCmdService.OnServiceListener
   @Override
   public void ackBleWatchSyncTime(boolean b)
   {
+  }
+
+  @Override
+  public void ackTimeGet(int i, int i1, int i2)
+  {
+
+  }
+
+  @Override
+  public void ackTimeCali(boolean b)
+  {
+
+  }
+
+  @Override
+  public void ackSwitchGet(BleSwitchData bleSwitchData)
+  {
+
+  }
+
+  @Override
+  public void ackSwitchCnt(int i)
+  {
+
+  }
+
+  @Override
+  public void ackAlertGet(BleAlertData bleAlertData)
+  {
+
   }
 
   interface BleEvent
