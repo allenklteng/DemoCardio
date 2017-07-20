@@ -1615,3 +1615,4 @@ app/build/tmp/expandedArchives/classes.jar_7b30mkbobxfeax8z9qr6l0cwf/com/vitalsi
 app/build/
 build/
 *.iml
+.idea/
