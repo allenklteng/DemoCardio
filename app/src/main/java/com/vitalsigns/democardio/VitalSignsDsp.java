@@ -135,7 +135,7 @@ public class VitalSignsDsp
       fEndTime = DSP.GetEndTime();
       fStartTime = fEndTime > UPDATE_VIEW_WINDOW ? fEndTime - UPDATE_VIEW_WINDOW : fEndTime;
       Log.d(LOG_TAG, "UpdateView(" + Float.toString(fStartTime) + ", " + Float.toString(fEndTime) + ")");
-      DSP.UpdateView(fStartTime, fEndTime, UI_CODE_TYPE_STANDARD);
+      updateView(fStartTime, fEndTime);
 
       /// [AT-PM] : Check the measurement is stable ; 10/25/2016
       if(DSP.BPStable())
@@ -282,4 +282,44 @@ public class VitalSignsDsp
     {
     }
   };
+
+  /**
+   * Get measurement end time
+   * @return ms
+   */
+  public float getEndTime()
+  {
+    return (DSP.GetEndTime());
+  }
+
+  /**
+   * Update the view for fetching data from DSP
+   * @param start start time in ms
+   * @param end end time in ms
+   * @return data count for ECG/PPG waveform
+   */
+  public int updateView(float start, float end)
+  {
+    return (DSP.UpdateView(start, end, UI_CODE_TYPE_STANDARD));
+  }
+
+  /**
+   * Get ECG waveform point
+   * @param idx index of the point
+   * @return (time, adc code) array
+   */
+  public float [] getEcg(int idx)
+  {
+    return (new float [] {DSP.GetEcgX(idx), DSP.GetEcgY(idx)});
+  }
+
+  /**
+   * Get PPG waveform point
+   * @param idx index of the point
+   * @return (time, adc code) array
+   */
+  public float [] getPpg(int idx)
+  {
+    return (new float [] {DSP.GetPpgX(idx), DSP.GetPpgY(idx)});
+  }
 }

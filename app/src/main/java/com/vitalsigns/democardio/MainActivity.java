@@ -5,6 +5,9 @@ import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -32,11 +35,12 @@ public class MainActivity extends AppCompatActivity
 {
   private static final String LOG_TAG = "MainActivity";
 
-  private FloatingActionButton FabStart = null;
-  private VitalSignsDsp VSDsp = null;
-  private int Sbp = -1;
-  private int Dbp = -1;
-  private int HR = -1;
+  private FloatingActionButton FabStart          = null;
+  private VitalSignsDsp        VSDsp             = null;
+  private int                  Sbp               = -1;
+  private int                  Dbp               = -1;
+  private int                  HR                = -1;
+  private HandlerThread        mBackgroundThread = null;
 
   @Override
   protected void onCreate(Bundle savedInstanceState)
@@ -204,6 +208,16 @@ public class MainActivity extends AppCompatActivity
       public void run()
       {
         FabStart.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), android.R.drawable.ic_media_play));
+      }
+    });
+
+    /// [AT-PM] : Save to file ; 07/20/2017
+    new Handler(mBackgroundThread.getLooper()).post(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        new SaveWaveform().save(VSDsp, "Waveform_" + Utility.getDateTime() + "_.csv");
       }
     });
   }
@@ -414,4 +428,24 @@ public class MainActivity extends AppCompatActivity
       Log.d(LOG_TAG, "onConnect()");
     }
   };
+
+  @Override
+  protected void onStart()
+  {
+    super.onStart();
+
+    /// [AT-PM] : Start background HandlerThread ; 07/20/2017
+    mBackgroundThread = new HandlerThread("Background Thread", Process.THREAD_PRIORITY_BACKGROUND);
+    mBackgroundThread.start();
+  }
+
+  @Override
+  protected void onStop()
+  {
+    super.onStop();
+
+    /// [AT-PM] : Release background HandlerThread ; 07/20/2017
+    Utility.releaseHandlerThread(mBackgroundThread);
+    mBackgroundThread = null;
+  }
 }
