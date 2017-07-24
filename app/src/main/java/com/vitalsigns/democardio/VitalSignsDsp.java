@@ -310,7 +310,9 @@ public class VitalSignsDsp
    */
   public float [] getEcg(int idx)
   {
-    return (new float [] {DSP.GetEcgX(idx), DSP.GetEcgY(idx)});
+    return (new float [] {DSP.GetEcgX(idx),
+                          DSP.GetEcgY(idx),
+                          DSP.ISEcgPeak(idx) ? 1f : 0f});
   }
 
   /**
@@ -320,6 +322,8 @@ public class VitalSignsDsp
    */
   public float [] getPpg(int idx)
   {
-    return (new float [] {DSP.GetPpgX(idx), DSP.GetPpgY(idx)});
+    return (new float [] {DSP.GetPpgX(idx),
+                          DSP.GetPpgY(idx),
+                          DSP.ISPpgPeak(idx) ? 1f : 0f});
   }
 }

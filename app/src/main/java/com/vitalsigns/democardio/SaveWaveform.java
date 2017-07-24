@@ -3,11 +3,6 @@ package com.vitalsigns.democardio;
 import android.os.Environment;
 import android.util.Log;
 
-import com.vitalsigns.sdk.ble.BlePedometerData;
-import com.vitalsigns.sdk.utility.Utility;
-
-import org.jetbrains.annotations.NotNull;
-
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -75,7 +70,7 @@ public class SaveWaveform
     {
       FileWriter fileWriter = new FileWriter(logFilename, true);
       BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-      bufferedWriter.write("ECG_X, ECG_Y, PPG_X, PPG_Y");
+      bufferedWriter.write("ECG_X, ECG_Y, ECG_PEAK, PPG_X, PPG_Y, PPG_PEAK");
       bufferedWriter.newLine();
       bufferedWriter.close();
       fileWriter.close();
@@ -106,11 +101,13 @@ public class SaveWaveform
       {
         float [] ecg = (idx < ecgs.size()) ? ecgs.get(idx) : null;
         float [] ppg = (idx < ppgs.size()) ? ppgs.get(idx) : null;
-        bufferedWriter.write(String.format("%.3f, %.3f, %.3f, %.3f",
+        bufferedWriter.write(String.format("%.3f, %.3f, %.0f, %.3f, %.3f, %.0f",
                                            (ecg == null) ? 0f : ecg[0],
                                            (ecg == null) ? 0f : ecg[1],
+                                           (ecg == null) ? 0f : ecg[2],
                                            (ppg == null) ? 0f : ppg[0],
-                                           (ppg == null) ? 0f : ppg[1]));
+                                           (ppg == null) ? 0f : ppg[1],
+                                           (ppg == null) ? 0f : ppg[2]));
         bufferedWriter.newLine();
         idx ++;
       }
