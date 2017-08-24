@@ -117,10 +117,15 @@ public class VitalSignsDsp
     }
 
     /// [AT-PM] : Stop BLE ; 10/25/2016
-    GlobalData.BleControl.stop();
-
-    /// [AT-PM] : Stop DSP ; 10/25/2016
-    DSP.Stop();
+    GlobalData.BleControl.stop(new VitalSignsBle.BleStop()
+    {
+      @Override
+      public void onStop()
+      {
+        /// [AT-PM] : Stop DSP ; 10/25/2016
+        DSP.Stop();
+      }
+    });
   }
 
   private final Runnable updateResultRunnable = new Runnable()

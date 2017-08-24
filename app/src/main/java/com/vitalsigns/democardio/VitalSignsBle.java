@@ -13,6 +13,7 @@ import android.util.Log;
 import com.vitalsigns.sdk.ble.BleCmdService;
 import com.vitalsigns.sdk.ble.BleService;
 import com.vitalsigns.sdk.ble.BleStatus;
+import com.vitalsigns.sdk.utility.Utility;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -30,6 +31,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
 
   private HandlerThread mServiceThread = null;
   private Handler mHandlerConnect = null;
+  private Handler mHandlerCheckStop = null;
 
   @Override
   public void bleConnectionLost(String s)
@@ -67,6 +69,11 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   {
     void onDisconnect();
     void onConnect();
+  }
+
+  interface BleStop
+  {
+    void onStop();
   }
 
   private BleEvent              mBleEvent        = null;
@@ -153,13 +160,43 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
 
   /**
    * Stop the measurement
+   * @param event BleStop interface
    */
-  void stop()
+  void stop(@NotNull final BleStop event)
   {
-    if(mBleService != null)
+    if(mBleService == null)
     {
-      mBleService.CmdStop();
+      return;
     }
+    mBleService.CmdStop();
+
+    /// [AT-PM] : Start a runnable to wait STOP event ; 08/24/2017
+    if(mHandlerCheckStop != null)
+    {
+      mHandlerCheckStop.removeCallbacksAndMessages(null);
+      mHandlerCheckStop = null;
+    }
+    mHandlerCheckStop = new Handler(mServiceThread.getLooper());
+    mHandlerCheckStop.post(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        /// [AT-PM] : Wait for the STOP action finished ; 08/24/2017
+        int timeout = 100;
+        while(!mBleService.CheckBleStatus(BleStatus.STATUS.BLE_ACK_STOP))
+        {
+          Log.d(LOG_TAG, String.format("Wait for %d", timeout));
+          Utility.SleepSomeTime(100);
+          timeout --;
+          if(timeout == 0)
+          {
+            break;
+          }
+        }
+        event.onStop();
+      }
+    });
   }
 
   /**
