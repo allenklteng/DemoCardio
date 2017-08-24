@@ -5,60 +5,53 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.util.Log;
 
-import com.vitalsigns.sdk.ble.BleAlertData;
 import com.vitalsigns.sdk.ble.BleCmdService;
-import com.vitalsigns.sdk.ble.BlePedometerData;
 import com.vitalsigns.sdk.ble.BleService;
-import com.vitalsigns.sdk.ble.BleSleepData;
-import com.vitalsigns.sdk.ble.BleSwitchData;
+import com.vitalsigns.sdk.ble.BleStatus;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-
 import static android.content.Context.BIND_AUTO_CREATE;
+import static android.os.Process.THREAD_PRIORITY_BACKGROUND;
 
 /**
  * Created by AllenTeng on 6/15/2017.
  */
 
-class VitalSignsBle implements BleCmdService.OnErrorListener,
-                               BleCmdService.OnStatusListener
+class VitalSignsBle implements BleCmdService.OnErrorListener
 {
   private static final String LOG_TAG = "VitalSignsBle";
+  private static final int CHECK_CONNECT_STATUS_INTERVAL = 100;
+
+  private HandlerThread mServiceThread = null;
+  private Handler mHandlerConnect = null;
 
   @Override
   public void bleConnectionLost(String s)
   {
     Log.d(LOG_TAG, "bleConnectionLost:" + s);
+    aboutCheckConnected();
     mBleEvent.onDisconnect();
-  }
-
-  @Override
-  public void bleReadyToGetData()
-  {
-    mBleEvent.onConnect();
   }
 
   @Override
   public void bleGattState()
   {
     Log.d(LOG_TAG, "bleGattState");
+    aboutCheckConnected();
     mBleEvent.onDisconnect();
-  }
-
-  @Override
-  public void bleOtaAck()
-  {
   }
 
   @Override
   public void bleTransmitTimeout()
   {
     Log.d(LOG_TAG, "bleTransmitTimeout");
+    aboutCheckConnected();
     mBleEvent.onDisconnect();
   }
 
@@ -66,6 +59,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener,
   public void bleAckError(String s)
   {
     Log.d(LOG_TAG, "bleAckError:" + s);
+    aboutCheckConnected();
     mBleEvent.onDisconnect();
   }
 
@@ -87,6 +81,9 @@ class VitalSignsBle implements BleCmdService.OnErrorListener,
 
     Intent intent = new Intent(context, BleService.class);
     mBleServiceBind = context.bindService(intent, mBleServiceConnection, BIND_AUTO_CREATE);
+
+    mServiceThread = new HandlerThread("BLE Service Thread", THREAD_PRIORITY_BACKGROUND);
+    mServiceThread.start();
   }
 
   private ServiceConnection mBleServiceConnection = new ServiceConnection()
@@ -96,7 +93,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener,
     {
       mBleService = ((BleService.LocalBinder)iBinder).getService();
       mBleService.Initialize(GlobalData.mBleIntDataQueue, BleCmdService.HW_TYPE.CARDIO);
-      mBleService.RegisterClient(null, VitalSignsBle.this, VitalSignsBle.this, null, null);
+      mBleService.RegisterClient(null, VitalSignsBle.this, null, null, null);
     }
 
     @Override
@@ -126,6 +123,9 @@ class VitalSignsBle implements BleCmdService.OnErrorListener,
       mBleService.SetBleDevice(BluetoothAdapter.getDefaultAdapter()
                                                .getRemoteDevice(mac));
       mBleService.Connect();
+
+      /// [AT-PM] : Start a handler to check connected event ; 08/24/2017
+      startCheckConnected();
     }
   }
 
@@ -178,5 +178,46 @@ class VitalSignsBle implements BleCmdService.OnErrorListener,
   boolean isConnect()
   {
     return ((mBleService != null) && mBleService.IsBleConnected());
+  }
+
+  /**
+   * Start to check the BLE connection is ready
+   */
+  private void startCheckConnected()
+  {
+    if(mHandlerConnect != null)
+    {
+      mHandlerConnect.removeCallbacksAndMessages(null);
+    }
+    mHandlerConnect = null;
+    mHandlerConnect = new Handler(mServiceThread.getLooper());
+    mHandlerConnect.postDelayed(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        if(mBleService.CheckBleStatus(BleStatus.STATUS.BLE_READY_TO_GET_DATA))
+        {
+          mBleEvent.onConnect();
+        }
+        else
+        {
+          /// [AT-PM] : Start next round ; 08/24/2017
+          mHandlerConnect.postDelayed(this, CHECK_CONNECT_STATUS_INTERVAL);
+        }
+      }
+    }, CHECK_CONNECT_STATUS_INTERVAL);
+  }
+
+  /**
+   * About the check BLE connected process
+   */
+  private void aboutCheckConnected()
+  {
+    if(mHandlerConnect != null)
+    {
+      mHandlerConnect.removeCallbacksAndMessages(null);
+    }
+    mHandlerConnect = null;
   }
 }
