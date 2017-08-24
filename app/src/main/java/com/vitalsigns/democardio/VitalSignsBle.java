@@ -25,24 +25,10 @@ import static android.content.Context.BIND_AUTO_CREATE;
  * Created by AllenTeng on 6/15/2017.
  */
 
-class VitalSignsBle implements BleCmdService.OnServiceListener
+class VitalSignsBle implements BleCmdService.OnErrorListener,
+                               BleCmdService.OnStatusListener
 {
   private static final String LOG_TAG = "VitalSignsBle";
-
-  @Override
-  public void chartNumberConfig(int i, int i1, int[] ints)
-  {
-  }
-
-  @Override
-  public void pedometerData(int i, ArrayList<BlePedometerData> arrayList)
-  {
-  }
-
-  @Override
-  public void sleepData(int i, int i1, ArrayList<BleSleepData> arrayList)
-  {
-  }
 
   @Override
   public void bleConnectionLost(String s)
@@ -83,46 +69,6 @@ class VitalSignsBle implements BleCmdService.OnServiceListener
     mBleEvent.onDisconnect();
   }
 
-  @Override
-  public void ackReceived(byte[] bytes)
-  {
-  }
-
-  @Override
-  public void ackBleWatchSyncTime(boolean b)
-  {
-  }
-
-  @Override
-  public void ackTimeGet(int i, int i1, int i2)
-  {
-
-  }
-
-  @Override
-  public void ackTimeCali(boolean b)
-  {
-
-  }
-
-  @Override
-  public void ackSwitchGet(BleSwitchData bleSwitchData)
-  {
-
-  }
-
-  @Override
-  public void ackSwitchCnt(int i)
-  {
-
-  }
-
-  @Override
-  public void ackAlertGet(BleAlertData bleAlertData)
-  {
-
-  }
-
   interface BleEvent
   {
     void onDisconnect();
@@ -150,7 +96,7 @@ class VitalSignsBle implements BleCmdService.OnServiceListener
     {
       mBleService = ((BleService.LocalBinder)iBinder).getService();
       mBleService.Initialize(GlobalData.mBleIntDataQueue, BleCmdService.HW_TYPE.CARDIO);
-      mBleService.RegisterClient(VitalSignsBle.this);
+      mBleService.RegisterClient(null, VitalSignsBle.this, VitalSignsBle.this, null, null);
     }
 
     @Override
