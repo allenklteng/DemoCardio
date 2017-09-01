@@ -76,9 +76,6 @@ public class VitalSignsDsp
     Running = true;
     StableCnt = 0;
 
-    /// [AT-PM] : Start BLE ; 10/25/2016
-    GlobalData.BleControl.start();
-
     /// [AT-PM] : Callback to update information ; 10/25/2016
     OnUpdateResultCallback.onUpdateResult(-1.0f, -1.0f, -1.0f);
     Log.d(LOG_TAG, "START");

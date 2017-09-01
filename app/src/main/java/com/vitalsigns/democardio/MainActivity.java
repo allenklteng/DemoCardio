@@ -431,6 +431,32 @@ public class MainActivity extends AppCompatActivity
     public void onConnect()
     {
       Log.d(LOG_TAG, "onConnect()");
+
+      /// [AT-PM] : Start BLE ; 10/25/2016
+      GlobalData.BleControl.start();
+
+      /// [AT-PM] : Start a runnable to check ECG is ready ; 09/01/2017
+      new Handler(mBackgroundThread.getLooper()).post(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          while(!GlobalData.BleControl.isEcgReady())
+          {
+            com.vitalsigns.sdk.utility.Utility.SleepSomeTime(100);
+          }
+
+          /// [AT-PM] : Start the measurement ; 09/01/2017
+          runOnUiThread(new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              start();
+            }
+          });
+        }
+      });
     }
   };
 

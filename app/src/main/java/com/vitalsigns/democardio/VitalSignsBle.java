@@ -154,7 +154,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   {
     if(mBleService != null)
     {
-      mBleService.CmdStart();
+      mBleService.CmdPreStart();
     }
   }
 
@@ -256,5 +256,14 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
       mHandlerConnect.removeCallbacksAndMessages(null);
     }
     mHandlerConnect = null;
+  }
+
+  /**
+   * Check ECG is ready
+   * @return true if ready
+   */
+  public boolean isEcgReady()
+  {
+    return (mBleService.IsEcgReady());
   }
 }
