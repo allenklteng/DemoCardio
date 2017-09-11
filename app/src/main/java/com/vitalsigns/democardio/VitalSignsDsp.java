@@ -39,6 +39,7 @@ public class VitalSignsDsp
   private Handler UpdateResultHandler;
   private Handler AutoStopHandler;
   private OnUpdateResult OnUpdateResultCallback;
+  private boolean EnableRestart = false;
 
   public VitalSignsDsp(Context context)
   {
@@ -82,7 +83,11 @@ public class VitalSignsDsp
     return (true);
   }
 
-  public void Stop()
+  /**
+   * Stop the measurement
+   * @param restart set true to enable restart pre-start process
+   */
+  public void Stop(boolean restart)
   {
     if(UpdateResultHandler != null)
     {
@@ -114,15 +119,8 @@ public class VitalSignsDsp
     }
 
     /// [AT-PM] : Stop BLE ; 10/25/2016
-    GlobalData.BleControl.stop(new VitalSignsBle.BleStop()
-    {
-      @Override
-      public void onStop()
-      {
-        /// [AT-PM] : Stop DSP ; 10/25/2016
-        DSP.Stop();
-      }
-    });
+    EnableRestart = restart;
+    GlobalData.BleControl.stop(mBleStopEvent);
   }
 
   private final Runnable updateResultRunnable = new Runnable()
@@ -328,4 +326,20 @@ public class VitalSignsDsp
                           DSP.GetPpgY(idx),
                           DSP.ISPpgPeak(idx) ? 1f : 0f});
   }
+
+  private VitalSignsBle.BleStop mBleStopEvent = new VitalSignsBle.BleStop()
+  {
+    @Override
+    public void onStop()
+    {
+      /// [AT-PM] : Stop DSP ; 10/25/2016
+      DSP.Stop();
+
+      /// [AT-PM] : Restart the pre-start measurement ; 09/11/2017
+      if(EnableRestart)
+      {
+        GlobalData.BleControl.start();
+      }
+    }
+  };
 }

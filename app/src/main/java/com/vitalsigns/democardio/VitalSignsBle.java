@@ -154,6 +154,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   {
     if(mBleService != null)
     {
+      Utility.PRINTFD(LOG_TAG + "mBleService.CmdPreStart()");
       mBleService.CmdPreStart();
     }
   }

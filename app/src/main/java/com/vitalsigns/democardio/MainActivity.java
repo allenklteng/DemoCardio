@@ -191,7 +191,11 @@ public class MainActivity extends AppCompatActivity
     return (true);
   }
 
-  private void stop()
+  /**
+   * Stop the measurement
+   * @param restart set true to restart the pre-start process
+   */
+  private void stop(boolean restart)
   {
     /// [AT-PM] : No need to stop if not in recording ; 07/20/2017
     if(!GlobalData.Recording)
@@ -203,7 +207,7 @@ public class MainActivity extends AppCompatActivity
     {
       return;
     }
-    VSDsp.Stop();
+    VSDsp.Stop(restart);
 
     GlobalData.Recording = false;
 
@@ -244,7 +248,7 @@ public class MainActivity extends AppCompatActivity
       /// [AT-PM] : Stop the recording ; 06/16/2017
       if(GlobalData.Recording)
       {
-        stop();
+        stop(true);
 
         Snackbar.make(view, "Blood pressure measurement -> STOPPED", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
@@ -343,7 +347,7 @@ public class MainActivity extends AppCompatActivity
   @Override
   public void onInterrupt()
   {
-    stop();
+    stop(true);
   }
 
   @Override
@@ -422,7 +426,7 @@ public class MainActivity extends AppCompatActivity
     public void onDisconnect()
     {
       Log.d(LOG_TAG, "onDisconnect()");
-      stop();
+      stop(false);
 
       GlobalData.BleControl.disconnect();
     }
