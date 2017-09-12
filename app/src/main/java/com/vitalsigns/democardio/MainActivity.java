@@ -210,6 +210,7 @@ public class MainActivity extends AppCompatActivity
     VSDsp.Stop(restart);
 
     GlobalData.Recording = false;
+    waitEcgReady();
 
     runOnUiThread(new Runnable()
     {
@@ -217,16 +218,6 @@ public class MainActivity extends AppCompatActivity
       public void run()
       {
         FabStart.setImageDrawable(ContextCompat.getDrawable(getApplicationContext(), android.R.drawable.ic_media_play));
-      }
-    });
-
-    /// [AT-PM] : Save to file ; 07/20/2017
-    new Handler(mBackgroundThread.getLooper()).post(new Runnable()
-    {
-      @Override
-      public void run()
-      {
-        new SaveWaveform().save(VSDsp, "Waveform_" + Utility.getDateTime() + ".csv");
       }
     });
   }
@@ -335,6 +326,10 @@ public class MainActivity extends AppCompatActivity
     {
       GlobalData.BleControl.destroy();
     }
+    if(VSDsp != null)
+    {
+      VSDsp.destroy();
+    }
   }
 
   @Override
@@ -438,29 +433,7 @@ public class MainActivity extends AppCompatActivity
 
       /// [AT-PM] : Start BLE ; 10/25/2016
       GlobalData.BleControl.start();
-
-      /// [AT-PM] : Start a runnable to check ECG is ready ; 09/01/2017
-      new Handler(mBackgroundThread.getLooper()).post(new Runnable()
-      {
-        @Override
-        public void run()
-        {
-          while(!GlobalData.BleControl.isEcgReady())
-          {
-            com.vitalsigns.sdk.utility.Utility.SleepSomeTime(100);
-          }
-
-          /// [AT-PM] : Start the measurement ; 09/01/2017
-          runOnUiThread(new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              start();
-            }
-          });
-        }
-      });
+      waitEcgReady();
     }
   };
 
@@ -482,5 +455,34 @@ public class MainActivity extends AppCompatActivity
     /// [AT-PM] : Release background HandlerThread ; 07/20/2017
     Utility.releaseHandlerThread(mBackgroundThread);
     mBackgroundThread = null;
+  }
+
+  /**
+   * Start a runnable to wait ECG ready
+   */
+  private void waitEcgReady()
+  {
+    /// [AT-PM] : Start a runnable to check ECG is ready ; 09/01/2017
+    new Handler(mBackgroundThread.getLooper()).post(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        while(!GlobalData.BleControl.isEcgReady())
+        {
+          com.vitalsigns.sdk.utility.Utility.SleepSomeTime(100);
+        }
+
+        /// [AT-PM] : Start the measurement ; 09/01/2017
+        runOnUiThread(new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            start();
+          }
+        });
+      }
+    });
   }
 }

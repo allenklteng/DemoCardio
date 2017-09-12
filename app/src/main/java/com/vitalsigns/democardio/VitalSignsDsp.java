@@ -34,12 +34,12 @@ public class VitalSignsDsp
   private boolean Executing = false;
   private int StableCnt = 0;
   private Dsp DSP = null;
-  private HandlerThread DspThread;
   private Handler DspThreadHandler;
   private Handler UpdateResultHandler;
   private Handler AutoStopHandler;
   private OnUpdateResult OnUpdateResultCallback;
   private boolean EnableRestart = false;
+  private HandlerThread DspThread = null;
 
   public VitalSignsDsp(Context context)
   {
@@ -48,6 +48,9 @@ public class VitalSignsDsp
                   context.getString(R.string.package_identity),
                   mOnSendBPInfoEvent);
     OnUpdateResultCallback = (OnUpdateResult)context;
+
+    DspThread = new HandlerThread("DSP Thread", Process.THREAD_PRIORITY_BACKGROUND);
+    DspThread.start();
   }
 
   public boolean Start()
@@ -66,8 +69,6 @@ public class VitalSignsDsp
       return (false);
     }
 
-    DspThread = new HandlerThread("DSP Thread", Process.THREAD_PRIORITY_BACKGROUND);
-    DspThread.start();
     DspThreadHandler = null;
     DspThreadHandler = new Handler(DspThread.getLooper());
     DspThreadHandler.postDelayed(dspThreadRunnable, CAPTURE_BLE_INIT_TIME);
@@ -96,25 +97,19 @@ public class VitalSignsDsp
 
     /// [AT-PM] : Stop the thread ; 10/25/2016
     Running = false;
-    if(DspThread != null)
+    if(DspThreadHandler != null)
     {
-      if(DspThreadHandler != null)
+      DspThreadHandler.removeCallbacksAndMessages(null);
+    }
+    while(Executing)
+    {
+      try
       {
-        DspThreadHandler.removeCallbacksAndMessages(null);
+        Thread.sleep(10);
       }
-      DspThread.quit();
-      DspThread.interrupt();
-      DspThread = null;
-      while(Executing)
+      catch (InterruptedException e)
       {
-        try
-        {
-          Thread.sleep(10);
-        }
-        catch (InterruptedException e)
-        {
-          e.printStackTrace();
-        }
+        e.printStackTrace();
       }
     }
 
@@ -335,11 +330,30 @@ public class VitalSignsDsp
       /// [AT-PM] : Stop DSP ; 10/25/2016
       DSP.Stop();
 
-      /// [AT-PM] : Restart the pre-start measurement ; 09/11/2017
-      if(EnableRestart)
+      /// [AT-PM] : Save to file ; 07/20/2017
+      new Handler(DspThread.getLooper()).post(new Runnable()
       {
-        GlobalData.BleControl.start();
-      }
+        @Override
+        public void run()
+        {
+          new SaveWaveform().save(VitalSignsDsp.this,
+                                  "Waveform_" + com.vitalsigns.democardio.Utility.getDateTime() + ".csv");
+
+          /// [AT-PM] : Restart the pre-start measurement ; 09/11/2017
+          if(EnableRestart)
+          {
+            GlobalData.BleControl.start();
+          }
+        }
+      });
     }
   };
+
+  /**
+   * Destroy the DSP object
+   */
+  public void destroy()
+  {
+    com.vitalsigns.democardio.Utility.releaseHandlerThread(DspThread);
+  }
 }

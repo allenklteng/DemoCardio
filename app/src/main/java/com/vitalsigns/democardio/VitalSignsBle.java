@@ -13,7 +13,6 @@ import android.util.Log;
 import com.vitalsigns.sdk.ble.BleCmdService;
 import com.vitalsigns.sdk.ble.BleService;
 import com.vitalsigns.sdk.ble.BleStatus;
-import com.vitalsigns.sdk.utility.Utility;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -26,12 +25,14 @@ import static android.os.Process.THREAD_PRIORITY_BACKGROUND;
 
 class VitalSignsBle implements BleCmdService.OnErrorListener
 {
-  private static final String LOG_TAG = "VitalSignsBle";
+  private static final String LOG_TAG = "VitalSignsBle:";
   private static final int CHECK_CONNECT_STATUS_INTERVAL = 100;
+  private static final int CHECK_STOP_STATUS_INTERVAL = 100;
 
   private HandlerThread mServiceThread = null;
   private Handler mHandlerConnect = null;
   private Handler mHandlerCheckStop = null;
+  private int mCheckStopTimeout = 100;
 
   @Override
   public void bleConnectionLost(String s)
@@ -118,6 +119,8 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
     {
       mContext.unbindService(mBleServiceConnection);
     }
+
+    Utility.releaseHandlerThread(mServiceThread);
   }
 
   /**
@@ -154,7 +157,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   {
     if(mBleService != null)
     {
-      Utility.PRINTFD(LOG_TAG + "mBleService.CmdPreStart()");
+      Log.d(LOG_TAG, "mBleService.CmdPreStart()");
       mBleService.CmdPreStart();
     }
   }
@@ -174,30 +177,39 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
     /// [AT-PM] : Start a runnable to wait STOP event ; 08/24/2017
     if(mHandlerCheckStop != null)
     {
+      Log.d(LOG_TAG, "Remove mHandlerCheckStop");
       mHandlerCheckStop.removeCallbacksAndMessages(null);
       mHandlerCheckStop = null;
     }
+    mCheckStopTimeout = 100;
     mHandlerCheckStop = new Handler(mServiceThread.getLooper());
-    mHandlerCheckStop.post(new Runnable()
+    mHandlerCheckStop.postDelayed(new Runnable()
     {
       @Override
       public void run()
       {
         /// [AT-PM] : Wait for the STOP action finished ; 08/24/2017
-        int timeout = 100;
-        while(!mBleService.CheckBleStatus(BleStatus.STATUS.BLE_ACK_STOP))
+        if(mBleService.CheckBleStatus(BleStatus.STATUS.BLE_ACK_STOP))
         {
-          Log.d(LOG_TAG, String.format("Wait for %d", timeout));
-          Utility.SleepSomeTime(100);
-          timeout --;
-          if(timeout == 0)
-          {
-            break;
-          }
+          Log.d(LOG_TAG, "mBleService.CheckBleStatus(BleStatus.STATUS.BLE_ACK_STOP)");
+          event.onStop();
+          return;
         }
+
+        /// [AT-PM] : Check STOP timeout ; 09/12/2017
+        mCheckStopTimeout --;
+        if(mCheckStopTimeout > 0)
+        {
+          Log.d(LOG_TAG, String.format("Check STOP timeout -> mCheckStopTimeout = %d", mCheckStopTimeout));
+          mHandlerCheckStop.postDelayed(this, CHECK_STOP_STATUS_INTERVAL);
+          return;
+        }
+
+        /// [AT-PM] : STOP timeout ; 09/12/2017
+        Log.d(LOG_TAG, "STOP timeout");
         event.onStop();
       }
-    });
+    }, CHECK_STOP_STATUS_INTERVAL);
   }
 
   /**
@@ -234,6 +246,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
       @Override
       public void run()
       {
+        com.vitalsigns.sdk.utility.Utility.PRINTFD(LOG_TAG + "mHandlerConnect.postDelayed()");
         if(mBleService.CheckBleStatus(BleStatus.STATUS.BLE_READY_TO_GET_DATA))
         {
           mBleEvent.onConnect();
