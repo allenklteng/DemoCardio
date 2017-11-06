@@ -280,4 +280,17 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   {
     return (mBleService.IsEcgReady());
   }
+
+  /**
+   * Get device firmware version
+   * @return version string
+   */
+  public String getVersion()
+  {
+    if(mBleService == null)
+    {
+      return ("");
+    }
+    return (mBleService.GetVersion());
+  }
 }

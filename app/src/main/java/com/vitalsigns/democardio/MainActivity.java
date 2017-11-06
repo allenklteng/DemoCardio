@@ -20,6 +20,7 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.vitalsigns.sdk.ble.scan.DeviceListFragment;
 
@@ -95,6 +96,11 @@ public class MainActivity extends AppCompatActivity
     if(id == R.id.action_disconnect)
     {
       GlobalData.BleControl.disconnect();
+    }
+    if(id == R.id.action_read_fw_version)
+    {
+      Toast.makeText(this, "FW Verseion : " + GlobalData.BleControl.getVersion(), Toast.LENGTH_LONG)
+           .show();
     }
 
     return super.onOptionsItemSelected(item);

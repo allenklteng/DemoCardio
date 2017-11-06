@@ -14,4 +14,10 @@
     android:orderInCategory="101"
     android:title="@string/action_disconnect"
     app:showAsAction="never"/>
-</menu>
+
+  <item
+    android:id="@+id/action_read_fw_version"
+    android:orderInCategory="102"
+    android:title="@string/action_read_fw_version"
+    app:showAsAction="never"/>
+ </menu>
