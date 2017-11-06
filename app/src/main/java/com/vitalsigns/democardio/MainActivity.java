@@ -102,6 +102,11 @@ public class MainActivity extends AppCompatActivity
       Toast.makeText(this, "FW Verseion : " + GlobalData.BleControl.getVersion(), Toast.LENGTH_LONG)
            .show();
     }
+    if(id == R.id.action_read_battery_level)
+    {
+      Toast.makeText(this, "Battery Level : " + Integer.toString(GlobalData.BleControl.getBatteryLevel()), Toast.LENGTH_LONG)
+           .show();
+    }
 
     return super.onOptionsItemSelected(item);
   }

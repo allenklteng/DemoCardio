@@ -293,4 +293,21 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
     }
     return (mBleService.GetVersion());
   }
+
+  /**
+   * Get device battery level
+   * @return battery level in percentage
+   */
+  public int getBatteryLevel()
+  {
+    if(mBleService == null)
+    {
+      return (-2);
+    }
+    if(!mBleService.IsBleConnected())
+    {
+      return (-1);
+    }
+    return (mBleService.CmdShowBattery());
+  }
 }

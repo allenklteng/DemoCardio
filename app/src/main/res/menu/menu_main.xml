@@ -20,4 +20,10 @@
     android:orderInCategory="102"
     android:title="@string/action_read_fw_version"
     app:showAsAction="never"/>
+
+  <item
+    android:id="@+id/action_read_battery_level"
+    android:orderInCategory="103"
+    android:title="@string/action_read_battery_level"
+    app:showAsAction="never"/>
  </menu>
