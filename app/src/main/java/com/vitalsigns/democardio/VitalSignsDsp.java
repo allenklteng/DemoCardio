@@ -15,6 +15,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import static com.vitalsigns.sdk.dsp.bp.Constant.DEV_TYPE_BLE_WATCH;
+import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_POWERFUL;
+import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_RAW;
 import static com.vitalsigns.sdk.dsp.bp.Constant.UI_CODE_TYPE_STANDARD;
 
 /**
@@ -29,6 +31,11 @@ public class VitalSignsDsp
   private final int UPDATE_VIEW_WINDOW = 6000;
   private final int UPDATE_VIEW_INTERVAL = 1000;
   private final int STABLE_COUNT = 10;
+
+  public enum CODE_TYPE
+  {
+    RAW, STANDARD, POWERFUL,
+  }
 
   private boolean Running = false;
   private boolean Executing = false;
@@ -130,7 +137,7 @@ public class VitalSignsDsp
       fEndTime = DSP.GetEndTime();
       fStartTime = fEndTime > UPDATE_VIEW_WINDOW ? fEndTime - UPDATE_VIEW_WINDOW : fEndTime;
       Log.d(LOG_TAG, "UpdateView(" + Float.toString(fStartTime) + ", " + Float.toString(fEndTime) + ")");
-      updateView(fStartTime, fEndTime);
+      updateView(fStartTime, fEndTime, CODE_TYPE.STANDARD);
 
       /// [AT-PM] : Check the measurement is stable ; 10/25/2016
       if(DSP.BPStable())
@@ -291,11 +298,25 @@ public class VitalSignsDsp
    * Update the view for fetching data from DSP
    * @param start start time in ms
    * @param end end time in ms
+   * @param type waveform type
    * @return data count for ECG/PPG waveform
    */
-  public int updateView(float start, float end)
+  public int updateView(float start, float end, CODE_TYPE type)
   {
-    return (DSP.UpdateView(start, end, UI_CODE_TYPE_STANDARD));
+    int codeType = UI_CODE_TYPE_STANDARD;
+    switch(type)
+    {
+      case RAW:
+        codeType = UI_CODE_TYPE_RAW;
+        break;
+      case STANDARD:
+        codeType = UI_CODE_TYPE_STANDARD;
+        break;
+      case POWERFUL:
+        codeType = UI_CODE_TYPE_POWERFUL;
+        break;
+    }
+    return (DSP.UpdateView(start, end, codeType));
   }
 
   /**

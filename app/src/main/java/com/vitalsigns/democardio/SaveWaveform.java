@@ -36,7 +36,7 @@ public class SaveWaveform
     while(fStartTime < fEndTime)
     {
       /// [AT-PM] : Update view ; 07/20/2017
-      int cnt = dsp.updateView(fStartTime, fStartTime + UPDATE_WINDOW);
+      int cnt = dsp.updateView(fStartTime, fStartTime + UPDATE_WINDOW, VitalSignsDsp.CODE_TYPE.STANDARD);
 
       /// [AT-PM] : Get waveform ; 07/20/2017
       ArrayList<float []> arrayEcg = new ArrayList<>(cnt);
