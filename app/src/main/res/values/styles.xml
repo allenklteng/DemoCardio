@@ -17,4 +17,14 @@
 
   <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light"/>
 
+  <style name="ProgressDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
+    <!-- Used for the buttons -->
+    <item name="colorAccent">@color/md_blue_500</item>
+    <!-- Used for the title and text -->
+    <item name="android:textColor">@color/md_grey_200</item>
+    <!-- Used for the background -->
+    <item name="android:background">@color/md_grey_800</item>
+    <item name="android:windowTitleStyle">@style/MyDialogTitleTextStyle</item>
+  </style>
+
 </resources>

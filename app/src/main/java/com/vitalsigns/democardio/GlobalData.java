@@ -13,6 +13,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.widget.Toast;
 
+import com.vitalsigns.sdk.utility.RequestPermission;
+
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -176,19 +178,19 @@ public class GlobalData extends Application
     return (true);
   }
 
-  public static boolean requestPermissionForAndroidM(final Activity activity)
+  public static boolean requestPermissionForAndroidM(Activity activity)
   {
     boolean granted = true;
-
-    if(!requestPermissionAccessCoarseLocation(activity))
+    
+    if(!(RequestPermission.accessCoarseLocation(activity)))
     {
       granted = false;
     }
-    if(!requestPermissionExternalStorage(activity))
+    if(!(RequestPermission.accessExternalStorage(activity)))
     {
       granted = false;
     }
-    if(!requestPermissionReadPhoneState(activity))
+    if(!RequestPermission.accessReadPhoneState(activity))
     {
       granted = false;
     }

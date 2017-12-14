@@ -1,5 +1,6 @@
 package com.vitalsigns.democardio;
 
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -16,6 +17,7 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -23,12 +25,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.vitalsigns.sdk.ble.scan.DeviceListFragment;
+import com.vitalsigns.sdk.utility.RequestPermission;
 
 import java.util.Locale;
-
-import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_COARSE_LOCATION;
-import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_EXTERNAL_STORAGE;
-import static com.vitalsigns.democardio.GlobalData.PERMISSION_REQUEST_READ_PHONE_STATE;
 
 public class MainActivity extends AppCompatActivity
   implements DeviceListFragment.OnEvent,
@@ -42,7 +41,8 @@ public class MainActivity extends AppCompatActivity
   private int                  Dbp               = -1;
   private int                  HR                = -1;
   private HandlerThread        mBackgroundThread = null;
-
+  private ProgressDialog mProgressDialog;
+  
   @Override
   protected void onCreate(Bundle savedInstanceState)
   {
@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity
     setTextSize();
     showBioSignal(0, 0, 0);
 
-    if(GlobalData.requestPermissionForAndroidM(this))
+    if(GlobalData.requestPermissionForAndroidM(MainActivity.this))
     {
       initBle();
       Log.d(LOG_TAG, "scanBle @ onCreate()");
@@ -86,26 +86,41 @@ public class MainActivity extends AppCompatActivity
     //noinspection SimplifiableIfStatement
     if(id == R.id.action_scan_ble_device)
     {
-      if(GlobalData.requestPermissionForAndroidM(this))
+      if(GlobalData.requestPermissionForAndroidM(MainActivity.this))
       {
         Log.d(LOG_TAG, "scanBle @ onOptionsItemSelected()");
+
+        if(GlobalData.BleControl != null)
+        {
+          GlobalData.BleControl.disconnect();
+        }
+
         scanBle();
       }
       return (true);
     }
     if(id == R.id.action_disconnect)
     {
-      GlobalData.BleControl.disconnect();
+      if(GlobalData.BleControl != null)
+      {
+        GlobalData.BleControl.disconnect();
+      }
     }
     if(id == R.id.action_read_fw_version)
     {
-      Toast.makeText(this, "FW Verseion : " + GlobalData.BleControl.getVersion(), Toast.LENGTH_LONG)
-           .show();
+      if(GlobalData.BleControl != null)
+      {
+        Toast.makeText(this, "FW Verseion : " + GlobalData.BleControl.getVersion(), Toast.LENGTH_LONG)
+          .show();
+      }
     }
     if(id == R.id.action_read_battery_level)
     {
-      Toast.makeText(this, "Battery Level : " + Integer.toString(GlobalData.BleControl.getBatteryLevel()), Toast.LENGTH_LONG)
-           .show();
+      if(GlobalData.BleControl != null)
+      {
+        Toast.makeText(this, "Battery Level : " + Integer.toString(GlobalData.BleControl.getBatteryLevel()), Toast.LENGTH_LONG)
+          .show();
+      }
     }
 
     return super.onOptionsItemSelected(item);
@@ -221,7 +236,6 @@ public class MainActivity extends AppCompatActivity
     VSDsp.Stop(restart);
 
     GlobalData.Recording = false;
-    waitEcgReady();
 
     runOnUiThread(new Runnable()
     {
@@ -239,9 +253,18 @@ public class MainActivity extends AppCompatActivity
     public void onClick(View view)
     {
       /// [AT-PM] : Check connected ; 06/16/2017
+      if(GlobalData.BleControl == null)
+      {
+        Snackbar.make(view, "Connection first", Snackbar.LENGTH_LONG)
+                .setAction("Action", null)
+                .show();
+        return;
+      }
+      
+      /// [AT-PM] : Check connected ; 06/16/2017
       if(!GlobalData.BleControl.isConnect())
       {
-        Snackbar.make(view, "Blood pressure measurement -> STOPPED", Snackbar.LENGTH_LONG)
+        Snackbar.make(view, "Connection first", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
                 .show();
         return;
@@ -250,7 +273,7 @@ public class MainActivity extends AppCompatActivity
       /// [AT-PM] : Stop the recording ; 06/16/2017
       if(GlobalData.Recording)
       {
-        stop(true);
+        stop(false);
 
         Snackbar.make(view, "Blood pressure measurement -> STOPPED", Snackbar.LENGTH_LONG)
                 .setAction("Action", null)
@@ -258,19 +281,8 @@ public class MainActivity extends AppCompatActivity
         return;
       }
 
-      /// [AT-PM] : Start recording ; 06/16/2017
-      if(start())
-      {
-        Snackbar.make(view, "Blood pressure measurement -> STARTED", Snackbar.LENGTH_LONG)
-                .setAction("Action", null)
-                .show();
-      }
-      else
-      {
-        Snackbar.make(view, "Blood pressure measurement -> FAILED", Snackbar.LENGTH_LONG)
-                .setAction("Action", null)
-                .show();
-      }
+      GlobalData.BleControl.start();
+      waitEcgReady();
     }
   };
 
@@ -283,7 +295,8 @@ public class MainActivity extends AppCompatActivity
       Log.d(LOG_TAG, "No device selected");
       return;
     }
-
+  
+    showProgressDialog("Connecting...");
     /// [AT-PM] : Connect BLE device ; 10/24/2016
     GlobalData.BleControl.connect(bleDeviceAddress);
   }
@@ -300,8 +313,13 @@ public class MainActivity extends AppCompatActivity
 
   private void scanBle()
   {
-    if(GlobalData.requestPermissionForAndroidM(this))
+    if(GlobalData.requestPermissionForAndroidM(MainActivity.this))
     {
+      if(GlobalData.BleControl == null)
+      {
+        initBle();
+      }
+      
       /// [AT-PM] : Call a dialog to scan device ; 05/05/2017
       DeviceListFragment fragment = DeviceListFragment.newInstance(DeviceListFragment.ACTION_SCAN_BLE_DEVICE,
                                                                    DeviceListFragment.STYLE_WHITE);
@@ -353,7 +371,7 @@ public class MainActivity extends AppCompatActivity
   @Override
   public void onInterrupt()
   {
-    stop(true);
+    stop(false);
   }
 
   @Override
@@ -361,9 +379,13 @@ public class MainActivity extends AppCompatActivity
                                          @NonNull String[] permissions,
                                          @NonNull int[] grantResults)
   {
+    if((grantResults == null) || (grantResults.length == 0))
+    {
+      return;
+    }
     switch (requestCode)
     {
-      case PERMISSION_REQUEST_COARSE_LOCATION:
+      case RequestPermission.PERMISSION_REQUEST_COARSE_LOCATION:
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "coarse location permission granted");
@@ -383,7 +405,7 @@ public class MainActivity extends AppCompatActivity
           builder.show();
         }
         break;
-      case PERMISSION_REQUEST_EXTERNAL_STORAGE:
+      case RequestPermission.PERMISSION_REQUEST_EXTERNAL_STORAGE:
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "external storage permission granted");
@@ -403,7 +425,7 @@ public class MainActivity extends AppCompatActivity
           builder.show();
         }
         break;
-      case PERMISSION_REQUEST_READ_PHONE_STATE:
+      case RequestPermission.PERMISSION_REQUEST_READ_PHONE_STATE:
         if(grantResults[0] == PackageManager.PERMISSION_GRANTED)
         {
           Log.d(LOG_TAG, "read phone state granted");
@@ -435,13 +457,17 @@ public class MainActivity extends AppCompatActivity
       stop(false);
 
       GlobalData.BleControl.disconnect();
+      
+      hideProgressDialog();
     }
 
     @Override
     public void onConnect()
     {
       Log.d(LOG_TAG, "onConnect()");
-
+  
+      hideProgressDialog();
+      
       /// [AT-PM] : Start BLE ; 10/25/2016
       GlobalData.BleControl.start();
       waitEcgReady();
@@ -481,18 +507,100 @@ public class MainActivity extends AppCompatActivity
       {
         while(!GlobalData.BleControl.isEcgReady())
         {
+          if(!GlobalData.BleControl.isConnect())
+          {
+            runOnUiThread(new Runnable() {
+              @Override
+              public void run() {
+                Toast.makeText(MainActivity.this, "Disconnection", Toast.LENGTH_LONG).show();
+              }
+            });
+            return;
+          }
           com.vitalsigns.sdk.utility.Utility.SleepSomeTime(100);
         }
-
+        
         /// [AT-PM] : Start the measurement ; 09/01/2017
         runOnUiThread(new Runnable()
         {
           @Override
           public void run()
           {
-            start();
+            if(start())
+            {
+              /// [AT-PM] : Start recording ; 06/16/2017
+              Snackbar.make(findViewById(android.R.id.content),
+                            "Blood pressure measurement -> STARTED",
+                            Snackbar.LENGTH_LONG)
+                      .setAction("Action", null)
+                      .show();
+            }
+            else
+            {
+              Snackbar.make(findViewById(android.R.id.content),
+                            "Blood pressure measurement -> FAILED",
+                            Snackbar.LENGTH_LONG)
+                      .setAction("Action", null)
+                      .show();
+            }
           }
         });
+      }
+    });
+  }
+  
+  /**
+   * @brief showProgressDialog
+   *
+   * Show progress dialog
+   *
+   * @return NULL
+   */
+  private void showProgressDialog(final String strMsg) {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        if (mProgressDialog == null)
+        {
+          mProgressDialog = new ProgressDialog(MainActivity.this, R.style.ProgressDialogStyle);
+          mProgressDialog.setIndeterminate(true);
+          mProgressDialog.setCanceledOnTouchOutside(false);
+          mProgressDialog.setOnKeyListener(new DialogInterface.OnKeyListener()
+          {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event)
+            {
+              if(mProgressDialog != null && mProgressDialog.isShowing())
+              {
+                /// [CC] : Do nothing if true ; 10/31/2017
+                return (true);
+              }
+              return (false);
+            }
+          });
+        }
+        
+        mProgressDialog.setMessage(strMsg);
+        mProgressDialog.show();
+      }
+    });
+  }
+  
+  /**
+   * @brief hideProgressDialog
+   *
+   * Hide progress dialog
+   *
+   * @return NULL
+   */
+  private void hideProgressDialog() {
+    runOnUiThread(new Runnable() {
+      @Override
+      public void run() {
+        if ((mProgressDialog != null) && (mProgressDialog.isShowing()))
+        {
+          mProgressDialog.dismiss();
+        }
       }
     });
   }

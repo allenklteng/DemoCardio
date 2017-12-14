@@ -6,6 +6,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Process;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.vitalsigns.sdk.dsp.bp.Constant;
 import com.vitalsigns.sdk.dsp.bp.Dsp;
@@ -47,9 +48,11 @@ public class VitalSignsDsp
   private OnUpdateResult OnUpdateResultCallback;
   private boolean EnableRestart = false;
   private HandlerThread DspThread = null;
+  private Context mContext;
 
   public VitalSignsDsp(Context context)
   {
+    mContext = context;
     DSP = new Dsp((Activity)context,
                   context.getExternalFilesDir(null).getPath(),
                   context.getString(R.string.package_identity),
@@ -360,6 +363,13 @@ public class VitalSignsDsp
           new SaveWaveform().save(VitalSignsDsp.this,
                                   "Waveform_" + com.vitalsigns.democardio.Utility.getDateTime() + ".csv");
 
+          ((MainActivity)mContext).runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              Toast.makeText(mContext, "Measurement Finish", Toast.LENGTH_LONG).show();
+            }
+          });
+          
           /// [AT-PM] : Restart the pre-start measurement ; 09/11/2017
           if(EnableRestart)
           {

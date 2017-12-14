@@ -250,6 +250,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
         if(mBleService.CheckBleStatus(BleStatus.STATUS.BLE_READY_TO_GET_DATA))
         {
           mBleEvent.onConnect();
+          aboutCheckConnected();
         }
         else
         {
@@ -278,7 +279,14 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
    */
   public boolean isEcgReady()
   {
-    return (mBleService.IsEcgReady());
+    if(mBleService != null)
+    {
+      return (mBleService.IsEcgReady());
+    }
+    else
+    {
+      return (false);
+    }
   }
 
   /**
