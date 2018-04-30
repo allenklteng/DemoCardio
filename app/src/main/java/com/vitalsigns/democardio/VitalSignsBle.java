@@ -14,8 +14,6 @@ import com.vitalsigns.sdk.ble.BleCmdService;
 import com.vitalsigns.sdk.ble.BleService;
 import com.vitalsigns.sdk.ble.BleStatus;
 
-import org.jetbrains.annotations.NotNull;
-
 import static android.content.Context.BIND_AUTO_CREATE;
 import static android.os.Process.THREAD_PRIORITY_BACKGROUND;
 
@@ -33,6 +31,11 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
   private Handler mHandlerConnect = null;
   private Handler mHandlerCheckStop = null;
   private int mCheckStopTimeout = 100;
+
+  private BleEvent   mBleEvent        = null;
+  private BleService mBleService      = null;
+  private boolean    mBleServiceBind  = false;
+  private Context    mContext         = null;
 
   @Override
   public void bleConnectionLost(String s)
@@ -65,24 +68,19 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
     aboutCheckConnected();
     mBleEvent.onDisconnect();
   }
-
   interface BleEvent
   {
     void onDisconnect();
-    void onConnect();
-  }
+    void onConnect(String strDeviceName);
 
+  }
   interface BleStop
   {
     void onStop();
+
   }
 
-  private BleEvent              mBleEvent        = null;
-  private BleService            mBleService      = null;
-  private boolean               mBleServiceBind  = false;
-  private Context               mContext         = null;
-
-  VitalSignsBle(@NotNull Context context, @NotNull BleEvent event)
+  VitalSignsBle(Context context, BleEvent event)
   {
     mContext = context;
     mBleEvent = event;
@@ -166,7 +164,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
    * Stop the measurement
    * @param event BleStop interface
    */
-  void stop(@NotNull final BleStop event)
+  void stop(final BleStop event)
   {
     if(mBleService == null)
     {
@@ -249,7 +247,7 @@ class VitalSignsBle implements BleCmdService.OnErrorListener
         com.vitalsigns.sdk.utility.Utility.PRINTFD(LOG_TAG + "mHandlerConnect.postDelayed()");
         if(mBleService.CheckBleStatus(BleStatus.STATUS.BLE_READY_TO_GET_DATA))
         {
-          mBleEvent.onConnect();
+          mBleEvent.onConnect(mBleService.GetDeviceName());
           aboutCheckConnected();
         }
         else

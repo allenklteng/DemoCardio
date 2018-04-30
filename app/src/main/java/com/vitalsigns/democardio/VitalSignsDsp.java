@@ -56,7 +56,8 @@ public class VitalSignsDsp
     DSP = new Dsp((Activity)context,
                   context.getExternalFilesDir(null).getPath(),
                   context.getString(R.string.package_identity),
-                  mOnSendBPInfoEvent);
+                  mOnSendBPInfoEvent,
+                  null);
     OnUpdateResultCallback = (OnUpdateResult)context;
 
     DspThread = new HandlerThread("DSP Thread", Process.THREAD_PRIORITY_BACKGROUND);

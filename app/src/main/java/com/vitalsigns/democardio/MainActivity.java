@@ -42,6 +42,8 @@ public class MainActivity extends AppCompatActivity
   private int                  HR                = -1;
   private HandlerThread        mBackgroundThread = null;
   private ProgressDialog mProgressDialog;
+  private Menu mMenu;
+  private final int SHOW_ECG_WARING_DELEY_TIME = 5000; // 5 second
   
   @Override
   protected void onCreate(Bundle savedInstanceState)
@@ -72,6 +74,7 @@ public class MainActivity extends AppCompatActivity
   {
     // Inflate the menu; this adds items to the action bar if it is present.
     getMenuInflater().inflate(R.menu.menu_main, menu);
+    mMenu = menu;
     return true;
   }
 
@@ -104,6 +107,10 @@ public class MainActivity extends AppCompatActivity
       if(GlobalData.BleControl != null)
       {
         GlobalData.BleControl.disconnect();
+        if(mMenu != null)
+        {
+          mMenu.findItem(R.id.action_disconnect).setTitle(getString(R.string.action_disconnect));
+        }
       }
     }
     if(id == R.id.action_read_fw_version)
@@ -459,18 +466,31 @@ public class MainActivity extends AppCompatActivity
       GlobalData.BleControl.disconnect();
       
       hideProgressDialog();
+
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          Toast.makeText(MainActivity.this, "Disconnection", Toast.LENGTH_LONG).show();
+        }
+      });
     }
 
     @Override
-    public void onConnect()
+    public void onConnect(final String strDeviceName)
     {
       Log.d(LOG_TAG, "onConnect()");
   
       hideProgressDialog();
-      
-      /// [AT-PM] : Start BLE ; 10/25/2016
-      GlobalData.BleControl.start();
-      waitEcgReady();
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          if(mMenu != null)
+          {
+            mMenu.findItem(R.id.action_disconnect).setTitle(getString(R.string.action_disconnect) + "(" + strDeviceName + ")");
+          }
+          Toast.makeText(MainActivity.this, "Successful connection! Let measurement now !", Toast.LENGTH_LONG).show();
+        }
+      });
     }
   };
 
@@ -499,12 +519,14 @@ public class MainActivity extends AppCompatActivity
    */
   private void waitEcgReady()
   {
+    Handler waitEcgReadyHandler;
+    final Handler showWarningHandler;
+
     /// [AT-PM] : Start a runnable to check ECG is ready ; 09/01/2017
-    new Handler(mBackgroundThread.getLooper()).post(new Runnable()
-    {
+    waitEcgReadyHandler = new Handler(mBackgroundThread.getLooper());
+    waitEcgReadyHandler.post(new Runnable() {
       @Override
-      public void run()
-      {
+      public void run() {
         while(!GlobalData.BleControl.isEcgReady())
         {
           if(!GlobalData.BleControl.isConnect())
@@ -519,7 +541,7 @@ public class MainActivity extends AppCompatActivity
           }
           com.vitalsigns.sdk.utility.Utility.SleepSomeTime(100);
         }
-        
+
         /// [AT-PM] : Start the measurement ; 09/01/2017
         runOnUiThread(new Runnable()
         {
@@ -545,6 +567,28 @@ public class MainActivity extends AppCompatActivity
             }
           }
         });
+      }
+    });
+
+    showWarningHandler = new Handler();
+    showWarningHandler.post(new Runnable() {
+      @Override
+      public void run() {
+        if(!GlobalData.BleControl.isEcgReady())
+        {
+          runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              Snackbar.make(findViewById(android.R.id.content),
+                            "Put finger on watch and keep stable for a while",
+                            Snackbar.LENGTH_LONG)
+                      .setAction("Action", null)
+                      .show();
+            }
+          });
+
+          showWarningHandler.postDelayed(this, SHOW_ECG_WARING_DELEY_TIME);
+        }
       }
     });
   }
@@ -603,5 +647,15 @@ public class MainActivity extends AppCompatActivity
         }
       }
     });
+  }
+
+  @Override
+  public void onCancelDialog() {
+
+  }
+
+  @Override
+  public void onBleOTADeviceSelected(String s, String s1) {
+
   }
 }
