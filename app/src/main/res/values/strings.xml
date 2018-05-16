@@ -4,6 +4,7 @@
   <string name="action_disconnect">Disconnect</string>
   <string name="action_read_fw_version">Read FW Version</string>
   <string name="action_read_battery_level">Read Battery Level</string>
+  <string name="action_calibration">Calibration</string>
   <string name="sbp_title">SBP</string>
   <string name="dbp_title">DBP</string>
   <string name="hr_title">HR</string>
@@ -25,4 +26,6 @@
   <string name="request_permission_external_storage_content">Please grant external storage access so this app can save the measurement data.</string>
   <string name="request_permission_read_phone_state_title">This app needs read phone state</string>
   <string name="request_permission_read_phone_state_content">Please grant read phone state so this app can save the measurement data.</string>
+  <string name="calibration_title">Calibration</string>
+  <string name="calibration_fragment_tag">calibration_fragment_tag</string>
 </resources>

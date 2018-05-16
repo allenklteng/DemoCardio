@@ -26,4 +26,9 @@
     android:orderInCategory="103"
     android:title="@string/action_read_battery_level"
     app:showAsAction="never"/>
+  <item
+    android:id="@+id/action_calibration"
+    android:orderInCategory="104"
+    android:title="@string/action_calibration"
+    app:showAsAction="never"/>
  </menu>

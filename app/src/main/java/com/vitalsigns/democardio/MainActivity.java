@@ -3,6 +3,7 @@ package com.vitalsigns.democardio;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -24,9 +25,17 @@ import android.view.MenuItem;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.vitalsigns.democardio.Calibration.Calibration;
+import com.vitalsigns.democardio.Calibration.CalibrationFragment;
+import com.vitalsigns.democardio.database.NetTableData;
+import com.vitalsigns.democardio.database.ResultData;
+import com.vitalsigns.democardio.database.ServerDBHelper;
 import com.vitalsigns.sdk.ble.scan.DeviceListFragment;
 import com.vitalsigns.sdk.utility.RequestPermission;
 
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity
@@ -40,6 +49,8 @@ public class MainActivity extends AppCompatActivity
   private int                  Sbp               = -1;
   private int                  Dbp               = -1;
   private int                  HR                = -1;
+  private int                  Ptt               = -1;
+  private int                  PW                = -1;
   private HandlerThread        mBackgroundThread = null;
   private ProgressDialog mProgressDialog;
   private Menu mMenu;
@@ -58,7 +69,9 @@ public class MainActivity extends AppCompatActivity
 
     setFont();
     setTextSize();
-    showBioSignal(0, 0, 0);
+    GlobalData.setContext(MainActivity.this);
+    GlobalData.initDatabase(MainActivity.this);
+    showBioSignal(0, 0, 0,0, 0);
 
     if(GlobalData.requestPermissionForAndroidM(MainActivity.this))
     {
@@ -129,6 +142,10 @@ public class MainActivity extends AppCompatActivity
           .show();
       }
     }
+    if(id == R.id.action_calibration)
+    {
+      doCalibration();
+    }
 
     return super.onOptionsItemSelected(item);
   }
@@ -160,11 +177,13 @@ public class MainActivity extends AppCompatActivity
     ((TextView)findViewById(R.id.textHRValue)).setTextSize(textSize);
   }
 
-  private void showBioSignal(int nSbp, int nDbp, int nHR)
+  private void showBioSignal(int nSbp, int nDbp, int nHR, int nPtt, int nPW)
   {
     Sbp = nSbp;
     Dbp = nDbp;
-    HR = nHR;
+    HR  = nHR;
+    Ptt = nPtt;
+    PW  = nPW;
 
     runOnUiThread(new Runnable()
     {
@@ -369,10 +388,14 @@ public class MainActivity extends AppCompatActivity
   }
 
   @Override
-  public void onUpdateResult(float fSbp, float fDbp, float fHR)
+  public void onUpdateResult(float fSbp, float fDbp, float fHR, float fPtt, float fPW)
   {
-    showBioSignal((int)fSbp, (int)fDbp, (int)fHR);
-    Log.d(LOG_TAG, "SBP = " + Float.toString(fSbp) + ", DBP = " + Float.toString(fDbp) + ", HR = " + Float.toString(fHR));
+    showBioSignal((int)fSbp, (int)fDbp, (int)fHR, (int)fPtt, (int)fPW);
+    Log.d(LOG_TAG, "SBP = " + Float.toString(fSbp) +
+                         ", DBP = " + Float.toString(fDbp) +
+                         ", HR = " + Float.toString(fHR) +
+                         ", HR = " + Float.toString(fPtt) +
+                         ", HR = " + Float.toString(fPW));
   }
 
   @Override
@@ -464,12 +487,15 @@ public class MainActivity extends AppCompatActivity
       stop(false);
 
       GlobalData.BleControl.disconnect();
-      
       hideProgressDialog();
 
       runOnUiThread(new Runnable() {
         @Override
         public void run() {
+          if(mMenu != null)
+          {
+            mMenu.findItem(R.id.action_disconnect).setTitle(getString(R.string.action_disconnect));
+          }
           Toast.makeText(MainActivity.this, "Disconnection", Toast.LENGTH_LONG).show();
         }
       });
@@ -502,6 +528,8 @@ public class MainActivity extends AppCompatActivity
     /// [AT-PM] : Start background HandlerThread ; 07/20/2017
     mBackgroundThread = new HandlerThread("Background Thread", Process.THREAD_PRIORITY_BACKGROUND);
     mBackgroundThread.start();
+
+    downloadNetFile();
   }
 
   @Override
@@ -587,7 +615,11 @@ public class MainActivity extends AppCompatActivity
             }
           });
 
-          showWarningHandler.postDelayed(this, SHOW_ECG_WARING_DELEY_TIME);
+          if((GlobalData.BleControl != null) &&
+             (GlobalData.BleControl.isConnect() == true))
+          {
+            showWarningHandler.postDelayed(this, SHOW_ECG_WARING_DELEY_TIME);
+          }
         }
       }
     });
@@ -657,5 +689,164 @@ public class MainActivity extends AppCompatActivity
   @Override
   public void onBleOTADeviceSelected(String s, String s1) {
 
+  }
+
+  /**
+   * brief downloadNetFile
+   *
+   * Download NET file from server
+   *
+   * return NULL
+   */
+  private void downloadNetFile()
+  {
+    Handler handler = new Handler(mBackgroundThread.getLooper());
+    handler.post(new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        NetTableData netTableData;
+        ServerDBHelper objServer = new ServerDBHelper();
+
+        if(netFileExpired())
+        {
+          netTableData = objServer.FetchNetTable(getApplicationContext());
+          if(netTableData != null)
+          {
+            com.vitalsigns.sdk.utility.Utility.PRINTFD("[CC] netTableData != null");
+            GlobalData.DATABASE.DeleteNetTableAll();
+            GlobalData.DATABASE.AddNetTable(netTableData);
+            if(objServer.DownloadNetFile(getApplicationContext()))
+            {
+              if(netTableData.NCheckSum == GlobalData.netFileChkSum(MainActivity.this,"default_server.net"))
+              {
+                setNetFileTimestamp();
+              }
+            }
+          }
+          else
+          {
+            com.vitalsigns.sdk.utility.Utility.PRINTFD("[CC] netTableData == null");
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * brief netFileExpired
+   *
+   * Check the NET file is expired or not
+   *
+   * return true if expired
+   */
+  private boolean netFileExpired()
+  {
+    String strPreDate;
+    String [] strArrPreDate;
+    int nExpiredDay;
+
+    try
+    {
+      strPreDate = GlobalData.readString(getApplicationContext().getExternalFilesDir(null),
+                                         "last_net_download");
+      if(strPreDate == null)
+      {
+        Log.d(LOG_TAG, "No timestamp found");
+        return (true);
+      }
+      strArrPreDate = strPreDate.split("-");
+      Log.d(LOG_TAG, "NET file last downloaded at " + strArrPreDate[0] + "/" + strArrPreDate[1] + "/" + strArrPreDate[2]);
+    }
+    catch(IOException e)
+    {
+      e.printStackTrace();
+      return (true);
+    }
+
+    nExpiredDay  = (GlobalData.GetYear() - Integer.parseInt(strArrPreDate[0])) * 12;
+    nExpiredDay += (GlobalData.GetMonth() - Integer.parseInt(strArrPreDate[1])) * 30;
+    nExpiredDay += (GlobalData.GetDay() - Integer.parseInt(strArrPreDate[2]));
+    return (nExpiredDay > 1 ? true : false);
+  }
+
+  /**
+   * brief setNetFileTimestamp
+   *
+   * Set the timestamp of the NET file
+   *
+   * return NULL
+   */
+  private void setNetFileTimestamp()
+  {
+    try {
+      GlobalData.delete(getApplicationContext().getExternalFilesDir(null),
+                        "last_net_download");
+      GlobalData.writeString(getApplicationContext().getExternalFilesDir(null),
+                             "last_net_download",
+                             Integer.toString(GlobalData.GetYear()) + "-" +
+                             Integer.toString(GlobalData.GetMonth()) + "-" +
+                             Integer.toString(GlobalData.GetDay()));
+    }
+    catch(IOException e)
+    {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * brief doCalibration
+   *
+   * Do Calibration
+   *
+   */
+  private void doCalibration()
+  {
+    CalibrationFragment calibrationFragment;
+    calibrationFragment = new CalibrationFragment();
+    calibrationFragment.setCallback(listener);
+    calibrationFragment.show(getFragmentManager(), getResources().getString(R.string.calibration_fragment_tag));
+  }
+
+  private CalibrationFragment.OnCalibrationFragmentListener listener = new CalibrationFragment.OnCalibrationFragmentListener() {
+    @Override
+    public void onCalibration(int nCaliSbp, int nCaliDbp, int nCaliHr) {
+      saveDataToDatabase(nCaliSbp, nCaliDbp, nCaliHr);
+
+      Intent intent = new Intent(MainActivity.this, Calibration.class);
+      startService(intent);
+    }
+  };
+
+  /**
+   * @brief saveDataToDatabase
+   *
+   * Save data to database
+   *
+   * @return NULL
+   */
+  private void saveDataToDatabase(int nCaliSbp, int nCaliDbp, int nCaliHr)
+  {
+    Calendar objCalendar;
+    ResultData objResult;
+    SimpleDateFormat strSdf;
+
+    objCalendar = Calendar.getInstance();
+    strSdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+
+    objResult = new ResultData();
+    objResult.StrDate = strSdf.format(objCalendar.getTime());
+    objResult.NMeasSbp  = Sbp;
+    objResult.NMeasDbp  = Dbp;
+    objResult.NMeasHR   = HR;
+    objResult.NMeasPtt  = Ptt;
+    objResult.NMeasPW   = PW;
+    objResult.NRealSbp  = nCaliSbp;
+    objResult.NRealDbp  = nCaliDbp;
+    objResult.NRealHR   = nCaliHr;
+
+    /// [CC] : Save the calibration result to database ; 05/16/2018
+    GlobalData.DATABASE.saveResult(objResult);
   }
 }

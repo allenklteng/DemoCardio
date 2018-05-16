@@ -8,6 +8,8 @@ import android.os.Process;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.vitalsigns.democardio.database.NetTableData;
+import com.vitalsigns.democardio.database.ResultData;
 import com.vitalsigns.sdk.dsp.bp.Constant;
 import com.vitalsigns.sdk.dsp.bp.Dsp;
 import com.vitalsigns.sdk.utility.Utility;
@@ -57,7 +59,7 @@ public class VitalSignsDsp
                   context.getExternalFilesDir(null).getPath(),
                   context.getString(R.string.package_identity),
                   mOnSendBPInfoEvent,
-                  null);
+                  GlobalData.bSelectChina);
     OnUpdateResultCallback = (OnUpdateResult)context;
 
     DspThread = new HandlerThread("DSP Thread", Process.THREAD_PRIORITY_BACKGROUND);
@@ -90,7 +92,7 @@ public class VitalSignsDsp
     StableCnt = 0;
 
     /// [AT-PM] : Callback to update information ; 10/25/2016
-    OnUpdateResultCallback.onUpdateResult(-1.0f, -1.0f, -1.0f);
+    OnUpdateResultCallback.onUpdateResult(-1.0f, -1.0f, -1.0f, -1.0f, -1.0f);
     Log.d(LOG_TAG, "START");
     return (true);
   }
@@ -162,7 +164,7 @@ public class VitalSignsDsp
       Log.d(LOG_TAG, "Stable Count = " + Integer.toString(StableCnt));
 
       /// [AT-PM] : Callback to update information ; 10/25/2016
-      OnUpdateResultCallback.onUpdateResult(DSP.GetSbp(), DSP.GetDbp(), DSP.GetHeartRate());
+      OnUpdateResultCallback.onUpdateResult(DSP.GetSbp(), DSP.GetDbp(), DSP.GetHeartRate(), DSP.GetPtt(), DSP.GetPW());
 
       /// [AT-PM] : Start next round ; 10/25/2016
       if(Running)
@@ -239,13 +241,44 @@ public class VitalSignsDsp
 
   private boolean startDsp()
   {
+    int nIdx;
     boolean bRtn;
+    ResultData latestResultData;
+    ResultData[] resultDatasTraining;
+    NetTableData netTableData;
 
+    netTableData = GlobalData.DATABASE.GetNetTable();
+    latestResultData = GlobalData.DATABASE.GetLatestResult();
+    resultDatasTraining = GlobalData.DATABASE.GetResultTraining(Constant.MINIMUM_TRAINING_SBP,
+                                                                   Constant.MINIMUM_TRAINING_DBP,
+                                                                   Constant.MINIMUM_TRAINING_HR);
     DSP.ResetDspInfo();
 
+    if(netTableData != null)
+    {
+      if(netTableData.NActive == NetTableData.ACTIVE)
+      {
+        DSP.SetServerNetInfo(netTableData.NPttMax,
+                             netTableData.NPttMin,
+                             netTableData.FSbpGain,
+                             netTableData.FSbpOffset,
+                             netTableData.FDbpGain,
+                             netTableData.FDbpOffset);
+      }
+    }
+
+    DSP.SetUserNetInfo(GlobalData.FSbpGain,
+                       GlobalData.FSbpOffset,
+                       GlobalData.FDbpGain,
+                       GlobalData.FDbpOffset,
+                       GlobalData.NPttMax,
+                       GlobalData.NPttMin,
+                       GlobalData.FSbpWeighting,
+                       GlobalData.FDbpWeighting);
+
     /// [AT-PM] : Set basic user information ; 10/25/2016
-    DSP.SetUserInfo((float)(Utility.GetYear() - 1982),      ///< [AT-PM] : User birth year ; 10/25/2016
-                    true,                                   ///< [AT-PM] : true = MALE, false = FEMALE ; 10/25/2016
+    DSP.SetUserInfo((float)(Utility.GetYear() - 1982),          ///< [AT-PM] : User birth year ; 10/25/2016
+                    true,                                    ///< [AT-PM] : true = MALE, false = FEMALE ; 10/25/2016
                     173.0f,                                 ///< [AT-PM] : User height in cm ; 10/25/2016
                     76.0f,                                  ///< [AT-PM] : User weight in kg ; 10/25/2016
                     false,                                  ///< [AT-PM] : true if user has diabetes ; 10/25/2016
@@ -264,11 +297,60 @@ public class VitalSignsDsp
     DSP.SetMeasInfo((float)Utility.GetHour(),     ///< [AT-PM] : Hour of a day when measurement executed ; 10/25/2016
                     25.0f,                        ///< [AT-PM] : Ambient temperature in oC when measurement executed ; 10/25/2016
                     true,                         ///< [AT-PM] : true if using left wristband is at left hand ; 10/25/2016
-                    Constant.MEAS_POSITION_SIT    ///< [AT-PM] : Position during measurement ; 10/25/2016
-                    );
+                    Constant.MEAS_POSITION_SIT);    ///< [AT-PM] : Position during measurement ; 10/25/2016
 
-    /// [AT-PM] : Set initial value ; 10/25/2016
-    DSP.SetInitValue(-1.0f, -1.0f, -1.0f, -1.0f);
+    if(latestResultData == null)
+    {
+      /// [AT-PM] : Set initial value ; 10/25/2016
+      DSP.SetInitValue(-1.0f, -1.0f, -1.0f, -1.0f);
+    }
+    else
+    {
+      DSP.SetInitValue(latestResultData.NMeasPtt,
+                       latestResultData.NRealSbp,
+                       latestResultData.NRealDbp,
+                       latestResultData.NRealHR);
+    }
+
+    if(resultDatasTraining != null)
+    {
+      DSP.CaliInit(resultDatasTraining.length);
+
+      /// [AT-PM] : Set data one by one ; 09/05/2016
+      nIdx = resultDatasTraining.length - 1;
+      while(nIdx >= 0)
+      {
+        DSP.CaliSetData((float) resultDatasTraining[nIdx].NMeasHR,
+                        (float) resultDatasTraining[nIdx].NMeasPtt,
+                        25f,                                                    ///< [CC] : Ambient temperature ; 05/15/2018
+                        (float)(Utility.GetYear() - 1982),                          ///< [CC] : User birth year ; 05/15/2018
+                        (float) resultDatasTraining[nIdx].NHeight,
+                        (float) resultDatasTraining[nIdx].NWeight,
+                        true,                                                    ///< [CC] : true = MALE, false = FEMALE ; 05/15/2018
+                        (float) resultDatasTraining[nIdx].GetMeasHour(),
+                        true,                                                   ///< [CC] : true = left hand, false = right hand ; 05/15/2018
+                        (byte) resultDatasTraining[nIdx].NPosition,
+                        false,                                                  ///< [AT-PM] : true if user has diabetes ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has hypertension ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has peripheral vascular diseases ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has stroke ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has arrhythmia ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has heart failure ; 05/15/2018
+                        false,                                                  ///< [AT-PM] : true if user has chronic kidney disease ; 05/15/2018
+                        false,                                                 ///< [AT-PM] : true if user has high cholesterol ; 05/15/2018
+                        false,                                                 ///< [AT-PM] : true if user does smokes ; 05/15/2018
+                        false,                                                 ///< [AT-PM] : true if user does drink ; 05/15/2018
+                        (float) resultDatasTraining[nIdx].NRealSbp,
+                        (float) resultDatasTraining[nIdx].NRealDbp);
+
+        Log.d(LOG_TAG, "jniStart() ->" +
+                             " MeasHR = " + Integer.toString(resultDatasTraining[nIdx].NMeasHR) +
+                             " MeasPtt = " + Integer.toString(resultDatasTraining[nIdx].NMeasPtt) +
+                             " Height = " + Integer.toString(resultDatasTraining[nIdx].NHeight) +
+                             " Weight = " + Integer.toString(resultDatasTraining[nIdx].NWeight));
+        nIdx --;
+      }
+    }
 
     /// [AT-PM] : Start the DSP ; 10/25/2016
     bRtn = DSP.Start(GlobalData.BleControl.sampleRate(), DEV_TYPE_BLE_WATCH);
@@ -277,7 +359,7 @@ public class VitalSignsDsp
 
   interface OnUpdateResult
   {
-    void onUpdateResult(float fSbp, float fDbp, float fHR);
+    void onUpdateResult(float fSbp, float fDbp, float fHR, float fPtt, float fPW);
     void onInterrupt();
   }
 

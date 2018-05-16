@@ -3,18 +3,25 @@ package com.vitalsigns.democardio;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Application;
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.os.Build;
-import android.os.Handler;
+import android.os.Environment;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
-import android.widget.Toast;
 
+import com.vitalsigns.democardio.database.SqlDBHelper;
 import com.vitalsigns.sdk.utility.RequestPermission;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -25,41 +32,7 @@ import java.util.concurrent.BlockingQueue;
 public class GlobalData extends Application
 {
   public static boolean Recording = false;
-
-  private static Toast mToast = null;
-  private static final Handler toastReleaseHandler = new Handler();
-  public static void showToast(Context mContext, String message, int toastDuration)
-  {
-    if (mToast != null)
-    {
-      mToast.setText(message);
-      mToast.setDuration(toastDuration);
-
-      toastReleaseHandler.removeCallbacksAndMessages(null);
-      toastReleaseHandler.postDelayed(new Runnable()
-      {
-        @Override
-        public void run() {
-          mToast = null;
-        }
-      }, toastDuration == Toast.LENGTH_LONG ? 3500 : 2000);
-    }
-    else
-    {
-      mToast = Toast.makeText(mContext, message, toastDuration);
-      mToast.show();
-
-      toastReleaseHandler.postDelayed(new Runnable()
-      {
-        @Override
-        public void run() {
-          mToast = null;
-        }
-      }, toastDuration == Toast.LENGTH_LONG ? 3500 : 2000);
-    }
-  }
-
-  public static BluetoothDevice BleDevice;
+  public static SqlDBHelper DATABASE = null;
   public static VitalSignsBle BleControl;
   private static final int BLE_DATA_QUEUE_SIZE = 128;
   public static BlockingQueue<int []> mBleIntDataQueue = new ArrayBlockingQueue<>(BLE_DATA_QUEUE_SIZE);
@@ -67,6 +40,16 @@ public class GlobalData extends Application
   public static final int PERMISSION_REQUEST_COARSE_LOCATION = 1;
   public static final int PERMISSION_REQUEST_EXTERNAL_STORAGE = 2;
   public static final int PERMISSION_REQUEST_READ_PHONE_STATE = 3;
+  public static float FSbpGain = 0;
+  public static float FSbpOffset = 0;
+  public static float FDbpGain = 0;
+  public static float FDbpOffset = 0;
+  public static int   NPttMax = -1;
+  public static int   NPttMin = -1;
+  public static float FSbpWeighting = 0.5f;
+  public static float FDbpWeighting = 0.5f;
+  public static Context mContext = null;
+  public static boolean bSelectChina = false;
 
   private static boolean requestPermissionAccessCoarseLocation(final Activity activity)
   {
@@ -195,5 +178,184 @@ public class GlobalData extends Application
       granted = false;
     }
     return (granted);
+  }
+
+  /**
+   * @brief setContext
+   *
+   * Set activity context
+   *
+   * @param context
+   */
+  public static void setContext(Context context)
+  {
+    mContext = context;
+  }
+
+  /**
+   * @brief initDatabase
+   *
+   * Initialize database
+   *
+   * return true if initial success
+   */
+  public static boolean initDatabase(Activity activity)
+  {
+    if(activity.getExternalFilesDir(null) != null)
+    {
+      DATABASE = new SqlDBHelper(activity, activity.getExternalFilesDir(null).getPath() + "/Database.db");
+      return (true);
+    }
+    return (false);
+  }
+
+  public static int GetYear()
+  {
+    Calendar calendar = Calendar.getInstance();
+    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy", Locale.US);
+    return Integer.parseInt(simpleDateFormat.format(calendar.getTime()));
+  }
+
+  public static int GetMonth() {
+    Calendar calendar = Calendar.getInstance();
+    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM", Locale.US);
+    return Integer.parseInt(simpleDateFormat.format(calendar.getTime()));
+  }
+
+  public static int GetDay() {
+    Calendar calendar = Calendar.getInstance();
+    SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd", Locale.US);
+    return Integer.parseInt(simpleDateFormat.format(calendar.getTime()));
+  }
+
+  /**
+   * @brief readString
+   *
+   * Read a string from the file
+   * @return string read from the file
+   * @throws IOException
+   */
+  public static String readString(File fPath, String sFilename) throws IOException
+  {
+    String state = Environment.getExternalStorageState();
+    if((!Environment.MEDIA_MOUNTED.equals(state)) &&
+       (!Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)))
+    {
+      return (null);
+    }
+
+    File fFile = new File(fPath, sFilename);
+    if(!fFile.isFile())
+    {
+      return (null);
+    }
+
+    byte[] bBuf = new byte[(int)fFile.length()];
+    FileInputStream objStream = new FileInputStream(fFile);
+    try
+    {
+      objStream.read(bBuf);
+    }
+    finally
+    {
+      objStream.close();
+    }
+    return (new String(bBuf));
+  }
+
+  /**
+   * brief netFileChkSum
+   *
+   * Check the NET file is download finish
+   *
+   * return lChkSum value
+   */
+  public static int netFileChkSum(Context context, String strFilename)
+  {
+    int lChkSum = 0;
+    byte[] bInputBuff = null;
+
+    String InputFilename = context.getExternalFilesDir(null).getPath();
+    InputFilename += "/";
+    InputFilename += strFilename;
+
+    File fFile =  new File(InputFilename);
+    try
+    {
+      FileInputStream inFile = new FileInputStream(InputFilename);
+      try
+      {
+        bInputBuff = new byte[(int)fFile.length()];
+        inFile.read(bInputBuff);
+      }
+      catch (IOException e)
+      {
+        e.printStackTrace();
+      }
+
+      for(int i = 0; i < (int)fFile.length(); i++)
+      {
+        if(bInputBuff[i] > 0)
+        {
+          lChkSum += bInputBuff[i];
+        }
+        else
+        {
+          lChkSum += (bInputBuff[i] & 0xff);
+        }
+      }
+
+      try
+      {
+        inFile.close();
+      }
+      catch (IOException e)
+      {
+        e.printStackTrace();
+      }
+    }
+    catch(FileNotFoundException e)
+    {
+      e.printStackTrace();
+    }
+    return lChkSum;
+  }
+
+  /**
+   * @brief delete
+   *
+   * Delete the file
+   *
+   * @return true if success
+   */
+  public static boolean delete(File fPath, String sFilename) {
+    File fFile = new File(fPath, sFilename);
+    return (fFile.delete());
+  }
+
+  /**
+   * @brief writeString
+   *
+   * Write a string to the file
+   *
+   * @param sData string to be written
+   * @throws IOException
+   */
+  public static void writeString(File fPath, String sFilename, String sData) throws IOException {
+    String state = Environment.getExternalStorageState();
+    if(!Environment.MEDIA_MOUNTED.equals(state)) {
+      return;
+    }
+
+    File fFile = new File(fPath, sFilename);
+    if(!fFile.exists()) {
+      fFile.createNewFile();
+    }
+    FileOutputStream objStream = new FileOutputStream(fFile, true);
+    try {
+      objStream.write(sData.getBytes());
+    } finally {
+      objStream.close();
+    }
   }
 }
