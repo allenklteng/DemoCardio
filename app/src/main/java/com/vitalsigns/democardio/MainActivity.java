@@ -391,11 +391,6 @@ public class MainActivity extends AppCompatActivity
   public void onUpdateResult(float fSbp, float fDbp, float fHR, float fPtt, float fPW)
   {
     showBioSignal((int)fSbp, (int)fDbp, (int)fHR, (int)fPtt, (int)fPW);
-    Log.d(LOG_TAG, "SBP = " + Float.toString(fSbp) +
-                         ", DBP = " + Float.toString(fDbp) +
-                         ", HR = " + Float.toString(fHR) +
-                         ", HR = " + Float.toString(fPtt) +
-                         ", HR = " + Float.toString(fPW));
   }
 
   @Override
@@ -714,7 +709,7 @@ public class MainActivity extends AppCompatActivity
           netTableData = objServer.FetchNetTable(getApplicationContext());
           if(netTableData != null)
           {
-            com.vitalsigns.sdk.utility.Utility.PRINTFD("[CC] netTableData != null");
+
             GlobalData.DATABASE.DeleteNetTableAll();
             GlobalData.DATABASE.AddNetTable(netTableData);
             if(objServer.DownloadNetFile(getApplicationContext()))
@@ -724,10 +719,6 @@ public class MainActivity extends AppCompatActivity
                 setNetFileTimestamp();
               }
             }
-          }
-          else
-          {
-            com.vitalsigns.sdk.utility.Utility.PRINTFD("[CC] netTableData == null");
           }
         }
       }

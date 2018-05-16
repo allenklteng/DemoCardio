@@ -34,7 +34,6 @@ public class NetTableAsyncTask extends BaseServerAsyncTask<String, Void, String>
       return (RTN_FAIL);
     }
 
-    Utility.PRINTFD("[CC] httpPost(" + GlobalData.bSelectChina + ")");
     if(!httpPost(GlobalData.bSelectChina))
     {
       return (RTN_HTTP_AUTH_FAIL);
